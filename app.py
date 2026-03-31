@@ -1747,4 +1747,12 @@ def chat_endpoint():
     return jsonify({"reply": "The VIBE AI Agent is temporarily offline for architectural upgrades.", "status": "success"})
 
 if __name__ == '__main__':
+    app.config.update(
+        SESSION_COOKIE_SECURE=True,  # Use HTTPS in production
+        SESSION_COOKIE_HTTPONLY=True,
+        SESSION_COOKIE_SAMESITE='Lax',
+        SESSION_COOKIE_DOMAIN='qdt-ai.com',  # Explicitly set domain if needed
+    )
     app.run(debug=True, host='0.0.0.0', port=5000)
+    # In app.py, after creating the app
+    
