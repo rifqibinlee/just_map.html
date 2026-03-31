@@ -712,6 +712,21 @@
     </button>
 
     <script>
+		async function checkSession() {
+		    try {
+		        const response = await fetch('/api/check_session');
+		        if (!response.ok) {
+		            // Session invalid, redirect to login or refresh
+		            console.warn('Session invalid, redirecting...');
+		            window.location.href = '/login?next=/map';
+		            return false;
+		        }
+		        return true;
+		    } catch (error) {
+		        console.error('Session check failed:', error);
+		        return false;
+		    }
+		}
         // --- 1. Map Initialization ---
         var map = L.map('map', { 
             zoomControl: false, 
@@ -1983,9 +1998,21 @@
         let currentConversationId = null; let allMessages = []; let allConversations = []; let chatPollInterval = null;
         const EMOJIS = ['😀','😂','😍','🥰','😎','🤔','😅','😭','😤','🙏','👍','👎','❤️','🔥','✅','⚡','🎉','💯','🚀','👏','😊','🤣','😆','😁','😋','🤩','😇','😴','🤗','😏','😒','🙄','😑','🤐','😬','🥲','😓','😥','😢','😨','😰','😱','🤯','🤫','🫡','🫠','💀','👻'];
         async function openMessagingModal() {
-            try { document.getElementById('menuDropdown').classList.add('hidden'); } catch(e) {}
-            document.getElementById('messagingModal').classList.remove('hidden'); buildEmojiPicker(); await loadConversations(); await loadUsersForMessaging();
-        }
+		    try {
+		        // Check session first
+		        const sessionValid = await checkSession();
+		        if (!sessionValid) return;
+		        
+		        document.getElementById('menuDropdown').classList.add('hidden');
+		        document.getElementById('messagingModal').classList.remove('hidden');
+		        buildEmojiPicker();
+		        await loadConversations();
+		        await loadUsersForMessaging();
+		    } catch(e) {
+		        console.error('Error opening messaging modal:', e);
+		        alert('Please refresh the page and try again. Session may have expired.');
+		    }
+}
         function closeMessagingModal() { document.getElementById('messagingModal').classList.add('hidden'); if (chatPollInterval) { clearInterval(chatPollInterval); chatPollInterval = null; } document.getElementById('emojiPicker').classList.add('hidden'); }
         function buildEmojiPicker() {
             const picker = document.querySelector('#emojiPicker > div'); if (picker.childElementCount > 0) return;
