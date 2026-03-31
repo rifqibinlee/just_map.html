@@ -76,6 +76,15 @@ ATHENA_CACHE_SETTINGS = {
 
 RAM_CACHE = {}
 
+def api_login_required(f):
+    """Decorator for API routes that returns JSON instead of redirecting"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return jsonify({'error': 'Authentication required'}), 401
+        return f(*args, **kwargs)
+    return decorated_function
+    
 def get_cached_dataframe(sql):
     """Fetches from server RAM if available, otherwise asks Athena/S3."""
     now = time.time()
@@ -140,7 +149,7 @@ def apply_pandas_filters(df, request_args):
 
     return filtered_df
 @app.route('/api/map/upgrade-cases')
-@login_required
+@api_login_required
 def api_map_upgrade_cases():
     """Get sites with upgrade cases directly from Athena"""
     week = request.args.get('week', type=int)
@@ -205,7 +214,7 @@ def api_map_upgrade_cases():
         
 # --- CORE ROUTES ---
 @app.route('/')
-@login_required
+@api_login_required
 def index(): 
     role = session.get('role', 'Staff')
     return render_template(
@@ -217,7 +226,7 @@ def index():
     )
 
 @app.route('/map')
-@login_required
+@api_login_required
 def map_view():
     role = session.get('role', 'Staff')
     
@@ -234,7 +243,7 @@ def map_view():
     )
 
 @app.route('/iam')
-@login_required
+@api_login_required
 @role_required('Admin')
 def iam_panel():
     role = session.get('role', 'Admin')
@@ -291,13 +300,13 @@ def logout():
     return redirect(url_for('login'))
 
 @app.route('/api/iam/users', methods=['GET'])
-@login_required
+@api_login_required
 @role_required('Admin')
 def get_users():
     return jsonify(get_all_users())
 
 @app.route('/api/iam/users/<int:user_id>', methods=['PUT', 'DELETE'])
-@login_required
+@api_login_required
 @role_required('Admin')
 def manage_user(user_id):
     if request.method == 'PUT':
@@ -307,13 +316,13 @@ def manage_user(user_id):
     return jsonify({'success': success, 'message': message})
 
 @app.route('/api/iam/login-history', methods=['GET'])
-@login_required
+@api_login_required
 @role_required('Admin')
 def get_login_history_route():
     return jsonify(get_login_history())
 
 @app.route('/api/iam/activity', methods=['GET'])
-@login_required
+@api_login_required
 @role_required('Admin')
 def get_user_activity():
     filter_type = request.args.get('filter', 'all')
@@ -337,12 +346,12 @@ def get_user_activity():
     except Exception as e: return jsonify({'error': str(e)}), 500
 
 @app.route('/api/user/permissions', methods=['GET'])
-@login_required
+@api_login_required
 def get_permissions():
     return jsonify(get_user_permissions(session.get('role', 'Staff')))
 
 @app.route('/api/user/change-password', methods=['POST'])
-@login_required
+@api_login_required
 def change_user_password():
     new_password = request.json.get('new_password', '')
     if not new_password or len(new_password) < 6: return jsonify({'success': False, 'message': 'Password must be at least 6 characters'}), 400
@@ -350,7 +359,7 @@ def change_user_password():
     return jsonify({'success': success, 'message': message})
 
 @app.route('/api/user/profile', methods=['GET', 'PUT'])
-@login_required
+@api_login_required
 def user_profile():
     user_id = session.get('user_id')
     if request.method == 'GET':
@@ -391,7 +400,7 @@ def get_or_create_conversation(user_id, other_user_id):
         return conv_id
 
 @app.route('/api/messages/conversations', methods=['GET'])
-@login_required
+@api_login_required
 def get_conversations():
     user_id = session.get('user_id')
     try:
@@ -420,7 +429,7 @@ def get_conversations():
     except Exception: return jsonify([])
 
 @app.route('/api/messages/conversation/<int:conv_id>', methods=['GET'])
-@login_required
+@api_login_required
 def get_conversation_messages(conv_id):
     user_id = session.get('user_id')
     with get_db_connection() as conn:
@@ -435,7 +444,7 @@ def get_conversation_messages(conv_id):
         return jsonify([{'id': r[0], 'sender_id': r[1], 'sender_name': r[2], 'content': r[3], 'sent_at': r[4].isoformat(), 'is_mine': r[5]} for r in cursor.fetchall()])
 
 @app.route('/api/messages/send', methods=['POST'])
-@login_required
+@api_login_required
 def send_message():
     user_id, data = session.get('user_id'), request.json
     conv_id, content = data.get('conversation_id'), data.get('content', '').strip()
@@ -449,7 +458,7 @@ def send_message():
         return jsonify({'success': True})
 
 @app.route('/api/messages/new', methods=['POST'])
-@login_required
+@api_login_required
 def start_new_conversation():
     user_id, data = session.get('user_id'), request.json
     recipient_id, content = data.get('recipient_id'), data.get('content', '').strip()
@@ -462,7 +471,7 @@ def start_new_conversation():
         return jsonify({'success': True, 'conversation_id': conv_id, 'partner_name': cursor.fetchone()[0]})
 
 @app.route('/api/messages/group/new', methods=['POST'])
-@login_required
+@api_login_required
 def start_group_conversation():
     user_id, data = session.get('user_id'), request.json
     member_ids = data.get('member_ids', [])
@@ -477,7 +486,7 @@ def start_group_conversation():
         return jsonify({'success': True, 'conversation_id': conv_id, 'title': title})
 
 @app.route('/api/messages/group/<int:conv_id>/<action>', methods=['POST'])
-@login_required
+@api_login_required
 def manage_group(conv_id, action):
     user_id, data = session.get('user_id'), request.json or {}
     with get_db_connection() as conn:
@@ -496,7 +505,7 @@ def manage_group(conv_id, action):
         return jsonify({'success': True})
 
 @app.route('/api/messages/group/<int:conv_id>/members', methods=['GET'])
-@login_required
+@api_login_required
 def get_group_members(conv_id):
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -504,7 +513,7 @@ def get_group_members(conv_id):
         return jsonify([{'id': r[0], 'full_name': r[1], 'username': r[2], 'role': r[3], 'is_admin': r[4]} for r in cursor.fetchall()])
 
 @app.route('/api/messages/users', methods=['GET'])
-@login_required
+@api_login_required
 def get_users_for_messaging():
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -512,7 +521,7 @@ def get_users_for_messaging():
         return jsonify([{'id': r[0], 'full_name': r[1], 'username': r[2]} for r in cursor.fetchall()])
 
 @app.route('/api/messages/unread-count', methods=['GET'])
-@login_required
+@@api_login_required
 def get_unread_count():
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -520,7 +529,7 @@ def get_unread_count():
         return jsonify({'count': cursor.fetchone()[0]})
 
 @app.route('/api/reviews', methods=['GET', 'POST'])
-@login_required
+@api_login_required
 def handle_reviews():
     if request.method == 'GET':
         with get_db_connection() as conn:
@@ -549,7 +558,7 @@ def handle_reviews():
     return jsonify({'success': True, 'id': row[0], 'created_at': row[1].isoformat()}), 201
 
 @app.route('/api/reviews/<int:review_id>', methods=['DELETE'])
-@login_required
+@api_login_required
 def delete_review(review_id):
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -613,7 +622,7 @@ def _compute_representative_point(shape_type, geojson_str, center_lat=None, cent
 
 
 @app.route('/api/annotations', methods=['GET'])
-@login_required
+@api_login_required
 def get_annotations():
     try:
         status_filter = request.args.get('status', '')
@@ -693,7 +702,7 @@ def get_annotations():
 
 
 @app.route('/api/annotations', methods=['POST'])
-@login_required
+@api_login_required
 def create_annotation():
     try:
         data     = request.get_json()
@@ -779,7 +788,7 @@ def create_annotation():
 
 
 @app.route('/api/annotations/<int:ann_id>', methods=['PUT'])
-@login_required
+@api_login_required
 def update_annotation(ann_id):
     try:
         data = request.get_json()
@@ -843,7 +852,7 @@ def update_annotation(ann_id):
 
 
 @app.route('/api/annotations/<int:ann_id>', methods=['DELETE'])
-@login_required
+@api_login_required
 def delete_annotation(ann_id):
     try:
         with get_db_connection() as conn:
@@ -864,7 +873,7 @@ def delete_annotation(ann_id):
 
 
 @app.route('/api/annotations/<int:ann_id>/comments', methods=['GET', 'POST'])
-@login_required
+@api_login_required
 def handle_annotation_comments(ann_id):
     try:
         with get_db_connection() as conn:
@@ -897,7 +906,7 @@ def handle_annotation_comments(ann_id):
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/users/list', methods=['GET'])
-@login_required
+@api_login_required
 def list_users_for_assign():
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -931,7 +940,7 @@ def get_pricing_ranges():
     except Exception: return {}
 
 @app.route('/api/pricing', methods=['GET', 'POST'])
-@login_required
+@api_login_required
 def pricing_endpoint():
     role = session.get('role', 'Staff')
     if request.method == 'POST':
@@ -977,7 +986,7 @@ def api_filters_regions():
     except Exception: return jsonify([])
 
 @app.route('/api/superset/guest-token')
-@login_required
+@api_login_required
 def get_superset_guest_token():
     dashboard_id = request.args.get('dashboard_id')
     if not dashboard_id:
