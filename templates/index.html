@@ -94,9 +94,9 @@
                     <i class="fas fa-star text-lg"></i>
                 </button>
 
-                <a href="/map" target="_blank" class="bg-white/20 hover:bg-white/30 text-white p-2.5 rounded-lg transition-all duration-300 shadow-lg hover:scale-110" title="View Coverage Map">
+                <button onclick="toggleMapPanel()" id="mapToggleBtn" class="bg-white/20 hover:bg-white/30 text-white p-2.5 rounded-lg transition-all duration-300 shadow-lg hover:scale-110" title="View Coverage Map">
                     <i class="fas fa-map-marked-alt text-lg"></i>
-                </a>
+                </button>
 
                 <div class="relative ml-2">
                     <button id="menuBtn" class="bg-white text-blue-600 px-4 py-2 rounded-lg font-bold hover:bg-gray-100 transition flex items-center gap-2 shadow-lg">
@@ -1009,6 +1009,835 @@
         } catch(e) {}
     }
     function escapeHtml(text) { const div = document.createElement('div'); div.appendChild(document.createTextNode(text)); return div.innerHTML; }
+    </script>
+
+    <!-- =====================================================
+         EMBEDDED COVERAGE MAP PANEL
+         ===================================================== -->
+
+    <!-- Map-specific CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+
+    <!-- Map-specific JS (loaded lazily on first open) -->
+    <script>
+    var _mapLibsLoaded = false;
+    function loadMapLibs(cb) {
+        if (_mapLibsLoaded) { cb(); return; }
+        var scripts = [
+            'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
+            'https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js',
+            'https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js',
+            'https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js'
+        ];
+        var loaded = 0;
+        scripts.forEach(function(src) {
+            var s = document.createElement('script');
+            s.src = src;
+            s.onload = function() { if (++loaded === scripts.length) { _mapLibsLoaded = true; cb(); } };
+            document.head.appendChild(s);
+        });
+    }
+    </script>
+
+    <style>
+        /* Map panel overlay */
+        #mapPanel {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 9000;
+            background: #f3f4f6;
+            flex-direction: column;
+        }
+        #mapPanel.open { display: flex; }
+
+        /* Map panel top bar */
+        #mapPanelBar {
+            background: linear-gradient(to right, #2563eb, #7c3aed);
+            color: white;
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+            z-index: 10;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        /* Inner map layout */
+        #mapPanelBody {
+            position: relative;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        #mapSidebar {
+            position: absolute; top: 0; left: 0; bottom: 0; width: 350px;
+            background-color: #ffffff; color: #1f2937; z-index: 1000;
+            padding: 20px; box-shadow: 2px 0 15px rgba(0,0,0,0.1);
+            display: flex; flex-direction: column; gap: 15px;
+            border-right: 1px solid #e5e7eb; overflow-y: auto;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        #mapSidebar.collapsed { transform: translateX(-100%); }
+
+        #mapLeaflet {
+            position: absolute; top: 0; right: 0; bottom: 0; left: 350px;
+            z-index: 1;
+            transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        #mapLeaflet.expanded { left: 0; }
+
+        #mapSidebarToggle {
+            position: absolute; left: 350px; top: 50%; transform: translateY(-50%);
+            width: 24px; height: 48px; background: #2563eb; border: none;
+            border-radius: 0 8px 8px 0; color: white; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            z-index: 1001; box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.2s;
+        }
+        #mapSidebarToggle:hover { background: #1d4ed8; width: 28px; }
+        #mapSidebarToggle.collapsed { left: 0; }
+        #mapSidebarToggle i { transition: transform 0.2s; }
+        #mapSidebarToggle.collapsed i { transform: rotate(180deg); }
+
+        /* Toolbar buttons inside the map panel */
+        .map-tool-btn {
+            position: absolute; z-index: 1200; color: white; border: none;
+            border-radius: 50%; width: 42px; height: 42px; font-size: 1rem;
+            cursor: pointer; display: flex !important; align-items: center !important;
+            justify-content: center !important;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.2);
+            transition: all 0.2s, left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .map-tool-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0,0,0,0.3); }
+
+        #mAnnotationBtn   { top: 10px; left: 370px; background: #1d4ed8; }
+        #mShowAnnBtn      { top: 62px; left: 370px; background: #1d4ed8; }
+        #mNotesBtn        { top: 10px; left: 422px; background: #6d28d9; }
+        #mMessagesBtn     { top: 10px; left: 474px; background: #8b5cf6; }
+        #mPricingBtn      { top: 10px; left: 526px; background: #059669; }
+        #mTasksBtn        { top: 10px; left: 578px; background: #d97706; }
+        #mReviewBtn       { top: 10px; left: 630px; background: #ea580c; }
+
+        #mapSidebar.collapsed ~ #mapSidebarToggle,
+        #mapSidebar.collapsed ~ #mAnnotationBtn  { left: 30px !important; }
+        #mapSidebar.collapsed ~ #mShowAnnBtn     { left: 30px !important; top: 62px !important; }
+        #mapSidebar.collapsed ~ #mNotesBtn       { left: 82px !important; }
+        #mapSidebar.collapsed ~ #mMessagesBtn    { left: 134px !important; }
+        #mapSidebar.collapsed ~ #mPricingBtn     { left: 186px !important; }
+        #mapSidebar.collapsed ~ #mTasksBtn       { left: 238px !important; }
+        #mapSidebar.collapsed ~ #mReviewBtn      { left: 290px !important; }
+
+        /* Map control / popup styles */
+        #mapPanel .control-group { background: #f9fafb; padding: 12px; border-radius: 8px; border: 1px solid #e5e7eb; }
+        #mapPanel .control-label { font-size: 0.7rem; font-weight: 700; color: #4b5563; text-transform: uppercase; margin-bottom: 6px; display: block; }
+        #mapPanel .light-input { width: 100%; background: #ffffff; border: 1px solid #d1d5db; padding: 8px 12px; border-radius: 6px; font-size: 0.85rem; outline: none; }
+
+        #mapPanel .leaflet-popup-content-wrapper { background: #ffffff; color: #1f2937; border-radius: 8px; padding: 0; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); overflow: hidden; }
+        #mapPanel .leaflet-popup-content { margin: 0; min-width: 750px !important; }
+        #mapPanel .popup-header { background: linear-gradient(to right, #2563eb, #1d4ed8); padding: 12px 16px; color: white; display: flex; flex-direction: column; gap: 8px; position: relative; }
+        #mapPanel .popup-header.header-congested { background: linear-gradient(to right, #dc2626, #991b1b); }
+        #mapPanel .popup-title { font-size: 1.2rem; font-weight: 900; letter-spacing: 0.5px; line-height: 1.1; }
+        #mapPanel .popup-sub { font-size: 0.75rem; color: #bfdbfe; font-weight: 600; }
+        #mapPanel .sector-table-container { max-height: 280px; overflow-y: auto; }
+        #mapPanel .sector-table, #mapPanel .matrix-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+        #mapPanel .sector-table th, #mapPanel .matrix-table th { background: #f3f4f6; color: #4b5563; font-weight: 800; padding: 8px; position: sticky; top: 0; border-bottom: 2px solid #e5e7eb; }
+        #mapPanel .sector-table td, #mapPanel .matrix-table td { padding: 6px 8px; border-bottom: 1px solid #e5e7eb; }
+        #mapPanel .sector-table td:first-child, #mapPanel .matrix-table td:first-child { text-align: left; font-weight: 700; color: #2563eb; }
+        #mapPanel .matrix-yes { background-color: #d1fae5; color: #065f46; font-weight: 900; }
+        #mapPanel .matrix-no  { background-color: #fee2e2; color: #991b1b; }
+        #mapPanel .val-alert  { color: #dc2626 !important; font-weight: 900 !important; background-color: #fef2f2; }
+        #mapPanel .badge { padding: 3px 8px; border-radius: 4px; font-size: 0.65rem; font-weight: 800; text-transform: uppercase; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        #mapPanel .badge-celcom   { background: #1e40af; color: white; }
+        #mapPanel .badge-digi     { background: #ca8a04; color: white; }
+        #mapPanel .badge-normal   { background: #059669; color: white; }
+        #mapPanel .badge-congested { background: #dc2626; color: white; animation: mpulse 2s infinite; }
+        #mapPanel .badge-urban    { background: #7e22ce; color: white; border: 1px solid #d8b4fe; }
+        #mapPanel .badge-outside  { background: #0f766e; color: white; border: 1px solid #99f6e4; }
+        @keyframes mpulse { 0%{opacity:1} 50%{opacity:.7} 100%{opacity:1} }
+        #mapPanel .cluster-base { border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:900; box-shadow:0 4px 10px rgba(0,0,0,0.2); width:40px; height:40px; }
+        #mapPanel .cluster-normal { background:#fff; color:#0056b3; border:2px solid #0056b3; }
+        #mapPanel .cluster-congested { background:#fff; color:#d90429; border:2px solid #d90429; animation:mpulsec 2s infinite; }
+        @keyframes mpulsec { 0%{box-shadow:0 0 0 0 rgba(217,4,41,0.7)} 70%{box-shadow:0 0 0 10px rgba(217,4,41,0)} 100%{box-shadow:0 0 0 0 rgba(217,4,41,0)} }
+        #mapPanel .header-btn { position:absolute; right:16px; bottom:12px; background:rgba(255,255,255,0.9); color:#1e40af; font-weight:900; font-size:0.7rem; padding:4px 10px; border-radius:4px; box-shadow:0 2px 4px rgba(0,0,0,0.2); transition:all 0.2s; border:none; cursor:pointer; display:flex; align-items:center; gap:4px; }
+        #mapPanel .header-btn:hover { background:#fff; transform:translateY(-1px); }
+        #mapPanel .shape-square { width:10px; height:10px; border:1px solid white; opacity:0.85; box-shadow:1px 1px 3px rgba(0,0,0,0.3); }
+        #mapPanel .shape-triangle { width:0; height:0; border-left:6px solid transparent; border-right:6px solid transparent; border-bottom:12px solid; opacity:0.85; filter:drop-shadow(1px 1px 1px rgba(0,0,0,0.4)); }
+        #mapPanel .map-autocomplete-results { position:absolute; top:100%; left:0; right:0; background:white; border:1px solid #e5e7eb; border-radius:0 0 8px 8px; max-height:200px; overflow-y:auto; z-index:5000; box-shadow:0 10px 15px -3px rgba(0,0,0,0.1); }
+        #mapPanel .map-autocomplete-item { padding:8px 12px; cursor:pointer; transition:background-color 0.2s; font-size:0.9rem; color:#374151; }
+        #mapPanel .map-autocomplete-item:hover { background-color:#f3f4f6; color:#2563eb; }
+
+        /* Map plot modal */
+        #mPlotModalOverlay { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:10000; align-items:center; justify-content:center; }
+        #mPlotModalOverlay.open { display:flex; }
+        #mPlotModal { background:white; width:95%; height:90%; border-radius:12px; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25); display:flex; flex-direction:column; overflow:hidden; }
+        #mPlotModal .plot-modal-header { background:linear-gradient(90deg,#f472b6 0%,#ec4899 100%); color:white; padding:16px 24px; display:flex; justify-content:space-between; align-items:center; }
+        #mPlotModal .plot-modal-body { flex:1; padding:20px; overflow-y:auto; background:#f9fafb; }
+
+        /* Sliding panels inside map */
+        .m-sliding-panel { position:absolute; top:0; right:0; bottom:0; width:360px; background:#fff; z-index:1500; display:flex; flex-direction:column; box-shadow:-4px 0 20px rgba(0,0,0,0.12); border-left:1px solid #e5e7eb; transform:translateX(100%); transition:transform 0.3s cubic-bezier(0.4,0,0.2,1); }
+        .m-sliding-panel.open { transform:translateX(0); }
+        #mAnnotationPanel .map-ann-header { background:#1e40af; color:white; padding:16px; display:flex; justify-content:space-between; align-items:center; font-weight:bold; }
+        #mAnnotationsList { flex:1; overflow-y:auto; padding:12px; background:#f3f4f6; }
+
+        /* Sector pricing panel inside map */
+        #mSectorPricingPanel { display:none; position:absolute; inset:0; background:rgba(0,0,0,0.5); z-index:6000; align-items:center; justify-content:center; }
+        #mSectorPricingPanel.open { display:flex; }
+
+        /* Map legend */
+        #mMapLegend { position:absolute; bottom:32px; right:32px; background:white; padding:16px; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.15); z-index:1000; width:224px; border:1px solid #e5e7eb; pointer-events:none; }
+    </style>
+
+    <!-- Map Panel HTML -->
+    <div id="mapPanel">
+        <!-- Top bar -->
+        <div id="mapPanelBar">
+            <div class="flex items-center gap-3">
+                <i class="fas fa-satellite text-lg"></i>
+                <div>
+                    <span class="font-bold text-base">Coverage Map</span>
+                    <span class="text-xs text-blue-200 ml-2">Advanced Site Topology & AI Forecast</span>
+                </div>
+            </div>
+            <button onclick="toggleMapPanel()" class="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg font-semibold text-sm transition flex items-center gap-2">
+                <i class="fas fa-times"></i> Close Map
+            </button>
+        </div>
+
+        <!-- Body: sidebar + leaflet map -->
+        <div id="mapPanelBody">
+            <div id="mapSidebar">
+                <div>
+                    <h1 class="text-xl font-bold flex items-center gap-3 text-gray-800 mb-1"><i class="fas fa-satellite text-blue-600"></i> NetAlytics</h1>
+                    <p class="text-xs text-gray-500">Advanced Site Topology & AI Forecast</p>
+                </div>
+
+                <div class="control-group relative">
+                    <label class="control-label">Search Site</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="mSiteSearchInput" placeholder="Enter Site ID..." class="light-input">
+                        <button onclick="mTriggerZoom()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 rounded-lg"><i class="fas fa-search"></i></button>
+                    </div>
+                    <div id="mSiteSearchResults" class="map-autocomplete-results hidden"></div>
+                </div>
+
+                <div class="control-group">
+                    <div class="grid grid-cols-2 gap-4 text-center">
+                        <div><p class="text-[10px] text-gray-400 font-bold uppercase">Visible Sites</p><p id="mSiteCount" class="text-2xl font-bold text-gray-800">0</p></div>
+                        <div><p class="text-[10px] text-gray-400 font-bold uppercase">Congested</p><p id="mCongCount" class="text-2xl font-bold text-red-600">0</p></div>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label">Filter Timeline & Region</label>
+                    <div class="flex gap-2">
+                        <select id="mWeekSelect" onchange="mUpdateFilters()" class="light-input flex-1"><option value="">Loading weeks...</option></select>
+                        <select id="mRegionSelect" onchange="mUpdateFilters()" class="light-input flex-1"><option value="All">All Regions</option></select>
+                    </div>
+                </div>
+
+                <div class="control-group flex-1 flex flex-col min-h-0 bg-white p-2">
+                    <label class="control-label text-red-600 mb-1"><i class="fas fa-trophy mr-1"></i> Top 10 Congested Sectors</label>
+                    <div id="mLeaderboardList" class="flex-1 overflow-y-auto bg-gray-50 border border-gray-100 rounded p-1 mb-3 max-h-32"></div>
+                    <label class="control-label text-blue-800 mb-1"><i class="fas fa-square mr-1"></i> Worst MR Clusters</label>
+                    <div id="mMrClusterList" class="flex-1 overflow-y-auto bg-gray-50 border border-gray-100 rounded p-1 mb-3 max-h-32"></div>
+                    <label class="control-label text-purple-700 mb-1"><i class="fas fa-caret-up mr-1"></i> Worst Ookla Clusters</label>
+                    <div id="mOoklaClusterList" class="flex-1 overflow-y-auto bg-gray-50 border border-gray-100 rounded p-1 max-h-32"></div>
+                </div>
+
+                <div id="mLoading" class="hidden text-center text-blue-600 text-sm font-bold mt-4"><i class="fas fa-circle-notch fa-spin mr-2"></i> Loading Data...</div>
+
+                <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 mt-auto">
+                    <p class="text-xs text-blue-800 font-semibold mb-2"><i class="fas fa-mouse-pointer mr-1"></i> Coverage Controls</p>
+                    <ul class="text-[10px] text-blue-700 space-y-1 list-disc pl-3">
+                        <li><b>Click Sidebar Cluster:</b> Show Spider-Web site distances.</li>
+                        <li><b>Ctrl + Click Site:</b> Render specific tower cones.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div id="mapLeaflet"></div>
+
+            <!-- Toolbar buttons -->
+            <button id="mapSidebarToggle" onclick="mToggleSidebar()" title="Toggle Sidebar"><i class="fas fa-chevron-left"></i></button>
+            <button id="mAnnotationBtn" class="map-tool-btn" onclick="mTogglePanel('mAnnotationPanel')" title="Annotations"><i class="fas fa-draw-polygon"></i></button>
+            <button id="mShowAnnBtn"    class="map-tool-btn" onclick="mToggleAllAnnotations()" title="Toggle Shapes"><i class="fas fa-eye"></i></button>
+            <button id="mNotesBtn"      class="map-tool-btn" onclick="mTogglePanel('mNotesPanel')" title="My Notes"><i class="fas fa-sticky-note"></i></button>
+            <button id="mMessagesBtn"   class="map-tool-btn" onclick="openMessagingModal()" title="Messages"><i class="fas fa-envelope"></i></button>
+            <button id="mPricingBtn"    class="map-tool-btn" onclick="mOpenAdminPricing()" title="Pricing"><i class="fas fa-dollar-sign"></i></button>
+            <button id="mTasksBtn"      class="map-tool-btn" onclick="mTogglePanel('mTasksPanel')" title="Tasks"><i class="fas fa-tasks"></i></button>
+            <button id="mReviewBtn"     class="map-tool-btn" onclick="openReviewModal()" title="Review"><i class="fas fa-star"></i></button>
+
+            <!-- Annotation Panel -->
+            <div id="mAnnotationPanel" class="m-sliding-panel">
+                <div class="map-ann-header">
+                    <span><i class="fas fa-layer-group"></i> Map Annotations</span>
+                    <button onclick="mTogglePanel('mAnnotationPanel')" class="hover:text-blue-200"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="p-2 bg-gray-100 border-b border-gray-200">
+                    <select id="mAnnFilterStatus" onchange="mLoadAnnotations()" class="w-full p-2 text-xs font-semibold border border-gray-300 rounded shadow-sm outline-none text-gray-600">
+                        <option value="">All Statuses</option>
+                        <option value="open">Open Issues</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="resolved">Resolved</option>
+                        <option value="closed">Closed</option>
+                    </select>
+                </div>
+                <div id="mAnnotationsList" class="flex-1 overflow-y-auto p-3 bg-gray-100 space-y-3">
+                    <div class="text-center text-gray-400 text-sm mt-10"><i class="fas fa-circle-notch fa-spin"></i> Loading...</div>
+                </div>
+            </div>
+
+            <!-- Notes Panel (simplified) -->
+            <div id="mNotesPanel" class="m-sliding-panel">
+                <div style="background:linear-gradient(135deg,#4c1d95,#7c3aed); color:white; padding:16px; display:flex; justify-content:space-between; align-items:center; flex-shrink:0;">
+                    <span class="font-bold flex items-center gap-2"><i class="fas fa-sticky-note"></i> My Notes</span>
+                    <button onclick="mTogglePanel('mNotesPanel')" class="text-white hover:text-purple-200"><i class="fas fa-times"></i></button>
+                </div>
+                <div id="mNoteList" class="flex-1 overflow-y-auto p-3 text-sm text-gray-500">Loading...</div>
+            </div>
+
+            <!-- Tasks Panel (simplified) -->
+            <div id="mTasksPanel" class="m-sliding-panel" style="width:380px;">
+                <div style="background:linear-gradient(135deg,#92400e,#d97706); color:white; padding:16px; display:flex; justify-content:space-between; align-items:center; flex-shrink:0;">
+                    <span class="font-bold flex items-center gap-2"><i class="fas fa-tasks"></i> Tasks</span>
+                    <button onclick="mTogglePanel('mTasksPanel')" class="text-white hover:text-amber-200"><i class="fas fa-times"></i></button>
+                </div>
+                <div id="mTaskList" class="flex-1 overflow-y-auto p-3 text-sm text-gray-500">Loading...</div>
+            </div>
+
+            <!-- Map Legend -->
+            <div id="mMapLegend">
+                <h4 class="text-xs font-bold text-gray-500 uppercase mb-3 tracking-wider border-b border-gray-100 pb-2">Map Layers</h4>
+                <div class="flex items-center gap-3 mb-2"><div class="w-3 h-3 rounded-full bg-white border-2 border-blue-600 shadow-sm"></div><span class="text-xs font-bold text-gray-700">All Sites (Clusters)</span></div>
+                <div class="flex items-center gap-3 mb-3"><div class="w-3 h-3 rounded-full bg-white border-2 border-red-600 shadow-sm"></div><span class="text-xs font-bold text-gray-700">Congested Site</span></div>
+                <div class="flex items-center gap-3 mb-1"><div class="w-3 h-3 rounded-full bg-yellow-400 border border-yellow-600"></div><span class="text-xs font-bold text-gray-700">5G (800m)</span></div>
+                <div class="flex items-center gap-3 mb-1"><div class="w-3 h-3 rounded-full bg-blue-500 border border-blue-700"></div><span class="text-xs font-bold text-gray-700">4G (3km)</span></div>
+                <div class="flex items-center gap-3 mb-3"><div class="w-3 h-3 rounded-full bg-gray-400 border border-gray-600"></div><span class="text-xs font-bold text-gray-700">2G (30km)</span></div>
+                <div class="flex items-center gap-3 mb-3 pt-2 border-t border-gray-100"><div class="w-20 h-2 rounded bg-gradient-to-r from-blue-400 via-yellow-400 to-red-600"></div><span class="text-xs font-bold text-gray-700">Heatmap</span></div>
+                <div class="flex items-center gap-3 mb-1 pt-2 border-t border-gray-100 mt-2"><div class="w-3 h-3 bg-red-600 border border-white"></div><span class="text-xs font-bold text-gray-700">MR Data Hole</span></div>
+                <div class="flex items-center gap-3"><div class="w-0 h-0 border-l-[6px] border-r-[6px] border-b-[10px] border-transparent border-b-blue-600"></div><span class="text-xs font-bold text-gray-700">Ookla Data Hole</span></div>
+            </div>
+
+            <!-- Sector Pricing Panel -->
+            <div id="mSectorPricingPanel">
+                <div class="bg-gray-50 rounded-2xl shadow-2xl w-full max-w-lg mx-4 flex flex-col overflow-hidden">
+                    <div class="bg-gradient-to-r from-green-600 to-teal-600 p-4 text-white flex justify-between items-center">
+                        <h3 class="font-bold text-lg flex items-center gap-2"><i class="fas fa-file-invoice-dollar"></i> CAPEX Breakdown</h3>
+                        <button onclick="document.getElementById('mSectorPricingPanel').classList.remove('open')" class="text-white text-xl"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="p-6 overflow-y-auto max-h-[75vh]" id="mSectorPricingContent"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Map Plot Modal (outside mapPanel so it layers on top) -->
+    <div id="mPlotModalOverlay">
+        <div id="mPlotModal">
+            <div class="plot-modal-header">
+                <div class="flex items-center gap-3"><i class="fas fa-chart-area text-xl"></i><div><h2 class="text-lg font-bold">Site Plot — KPIs</h2><p class="text-xs text-pink-100 opacity-90" id="mPlotModalSubTitle">Analyzing Site...</p></div></div>
+                <button onclick="mClosePlotModal()" class="text-white text-2xl"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-4 bg-white border-b border-gray-200 flex items-center gap-4">
+                <div class="flex flex-col"><span class="text-[10px] font-bold text-gray-500 uppercase">Site ID</span><span id="mModalSiteIdDisplay" class="font-bold text-gray-800 text-lg">-</span></div>
+                <div class="h-8 w-px bg-gray-300"></div>
+                <label class="flex items-center gap-2"><span class="text-sm font-semibold text-gray-600">Horizon:</span>
+                    <select id="mModalHorizonSelect" class="p-1 border border-gray-300 rounded text-sm" onchange="mRefreshPlot()">
+                        <option value="4">4 Weeks</option><option value="13">13 Weeks</option><option value="26">26 Weeks</option><option value="52" selected>52 Weeks</option>
+                    </select>
+                </label>
+            </div>
+            <div id="mMapPlotContainer" class="plot-modal-body"></div>
+        </div>
+    </div>
+
+    <!-- Admin Pricing Modal (for map) -->
+    <div id="mAdminPricingModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-[10001] flex items-center justify-center">
+        <div class="bg-white rounded-xl shadow-2xl w-[800px] max-h-[90vh] flex flex-col overflow-hidden">
+            <div class="bg-gray-800 text-white p-4 flex justify-between items-center">
+                <h3 class="font-bold text-lg"><i class="fas fa-sliders-h mr-2"></i> Base Pricing Configuration</h3>
+                <button onclick="document.getElementById('mAdminPricingModal').classList.add('hidden')" class="text-white hover:text-gray-300 text-xl"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-6 overflow-y-auto flex-1 bg-gray-50" id="mAdminPricingFormArea">
+                <div class="text-center text-gray-500"><i class="fas fa-circle-notch fa-spin"></i> Loading...</div>
+            </div>
+            <div class="p-4 border-t bg-white flex justify-end gap-3">
+                <button onclick="document.getElementById('mAdminPricingModal').classList.add('hidden')" class="px-4 py-2 border rounded font-bold text-gray-600 hover:bg-gray-100">Cancel</button>
+                <button onclick="mSaveAdminPricing()" class="px-6 py-2 bg-blue-600 text-white rounded font-bold shadow hover:bg-blue-700">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // =====================================================
+    // MAP PANEL CONTROLLER
+    // =====================================================
+    var _mapInitialized = false;
+    var _mMap, _mMarkers, _mCongestedMarkers, _mHeatmapLayer;
+    var _mLayer5G, _mLayer4G, _mLayer3G, _mLayer2G;
+    var _mLayerMRHoles, _mLayerOoklaHoles, _mLayerNoise;
+    var _mSiteDataCache = [];
+    var _mSiteMarkerMap = {};
+    var _mActiveCoverageLayers = [];
+    var _mConnectionLines = [];
+    var _mCurrentModalSiteId = null;
+    var _mDrawnItems;
+    var _mAnnotationsVisible = true;
+
+    function toggleMapPanel() {
+        var panel = document.getElementById('mapPanel');
+        var btn = document.getElementById('mapToggleBtn');
+        var isOpen = panel.classList.contains('open');
+
+        if (!isOpen) {
+            panel.classList.add('open');
+            btn.classList.add('bg-white/40');
+            loadMapLibs(function() {
+                if (!_mapInitialized) {
+                    _mapInitialized = true;
+                    _initMap();
+                } else {
+                    setTimeout(function() { _mMap.invalidateSize(); }, 100);
+                }
+            });
+        } else {
+            panel.classList.remove('open');
+            btn.classList.remove('bg-white/40');
+        }
+    }
+
+    function _initMap() {
+        _mMap = L.map('mapLeaflet', { zoomControl: false, boxZoom: true, preferCanvas: true }).setView([4.2105, 101.9758], 6);
+        L.control.zoom({ position: 'topright' }).addTo(_mMap);
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri', maxZoom: 19 }).addTo(_mMap);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', { attribution: '&copy;OpenStreetMap, &copy;CartoDB', subdomains: 'abcd', maxZoom: 19 }).addTo(_mMap);
+
+        _mMarkers = L.markerClusterGroup({ chunkedLoading: true, maxClusterRadius: 60, iconCreateFunction: function(c) { return new L.DivIcon({ html: '<div class="cluster-base cluster-normal"><span>' + c.getChildCount() + '</span></div>', className: 'marker-cluster', iconSize: new L.Point(40, 40) }); } });
+        _mCongestedMarkers = L.markerClusterGroup({ chunkedLoading: true, maxClusterRadius: 60, iconCreateFunction: function(c) { return new L.DivIcon({ html: '<div class="cluster-base cluster-congested"><span>' + c.getChildCount() + '</span></div>', className: 'marker-cluster', iconSize: new L.Point(40, 40) }); } });
+        _mHeatmapLayer = L.heatLayer([], { radius: 40, blur: 25, maxZoom: 15, minOpacity: 0.6, gradient: { 0.3: 'blue', 0.5: 'lime', 0.7: 'yellow', 0.85: 'orange', 0.95: 'red' } });
+        _mLayer5G = L.layerGroup(); _mLayer4G = L.layerGroup(); _mLayer3G = L.layerGroup(); _mLayer2G = L.layerGroup();
+        _mLayerMRHoles = L.featureGroup().addTo(_mMap);
+        _mLayerOoklaHoles = L.featureGroup().addTo(_mMap);
+        _mLayerNoise = L.layerGroup();
+        _mDrawnItems = new L.FeatureGroup();
+        _mMap.addLayer(_mMarkers);
+        _mMap.addLayer(_mDrawnItems);
+
+        var overlayMaps = {
+            "<span class='font-bold text-blue-600'>Site Clusters</span>": _mMarkers,
+            "<span class='font-bold text-red-600'>Congestion Counts</span>": _mCongestedMarkers,
+            "<span class='font-bold text-orange-500'>Heatmap</span>": _mHeatmapLayer,
+            "<span class='font-bold text-yellow-500'>5G Coverage</span>": _mLayer5G,
+            "<span class='font-bold text-blue-400'>4G Coverage</span>": _mLayer4G,
+            "<span class='font-bold text-gray-500'>2G Coverage</span>": _mLayer2G,
+            "<span class='font-bold text-blue-800'>MR Coverage Holes</span>": _mLayerMRHoles,
+            "<span class='font-bold text-purple-700'>Ookla Coverage Holes</span>": _mLayerOoklaHoles,
+            "<span class='font-bold text-black'>Signal Noise</span>": _mLayerNoise
+        };
+        L.control.layers(null, overlayMaps, { position: 'topright', collapsed: false }).addTo(_mMap);
+
+        _mMap.on('click', function() { _mClearCoverage(); });
+        _mMap.on('boxzoomend', function(e) { _mSiteDataCache.forEach(function(site) { if (e.boxZoomBounds.contains([site.lat, site.lng])) _mDrawSiteCoverage(site, true); }); });
+
+        _mInitMap();
+        _mSetupAutocomplete();
+    }
+
+    async function _mInitMap() {
+        await _mLoadWeeks();
+        await _mLoadRegions();
+        await _mLoadMapData();
+        _mLoadLeaderboard();
+        _mLoadWorstClusters();
+        _mLoadCoverageHoles();
+        _mLoadAnnotations();
+    }
+
+    async function _mLoadWeeks() {
+        try {
+            var res = await fetch('/api/weeks'); var weeks = await res.json();
+            if (weeks.length > 0) document.getElementById('mWeekSelect').innerHTML = weeks.map(function(w) { return '<option value="' + w + '">Week ' + w + '</option>'; }).join('');
+        } catch(e) {}
+    }
+
+    async function _mLoadRegions() {
+        try {
+            var res = await fetch('/api/filters/regions'); var regions = await res.json();
+            var sel = document.getElementById('mRegionSelect');
+            regions.forEach(function(r) { var o = document.createElement('option'); o.value = r; o.textContent = r; sel.appendChild(o); });
+        } catch(e) {}
+    }
+
+    function mUpdateFilters() { _mLoadMapData(); _mLoadLeaderboard(); }
+
+    async function _mLoadLeaderboard() {
+        try {
+            var week = document.getElementById('mWeekSelect').value;
+            var region = document.getElementById('mRegionSelect').value;
+            var res = await fetch('/api/map/top_congested?week=' + week + '&region=' + region);
+            var data = await res.json();
+            document.getElementById('mLeaderboardList').innerHTML = data.map(function(d, i) {
+                return '<div class="cursor-pointer flex justify-between p-2 border-b bg-white hover:bg-gray-100" onclick="mZoomToSite(\'' + d.zoom_sector_id.split('_')[0] + '\')">' +
+                    '<span class="font-bold text-gray-800 text-xs">#' + (i+1) + ' ' + d.zoom_sector_id + '</span>' +
+                    '<span class="bg-red-100 text-red-700 px-1 py-0.5 rounded text-[10px] font-bold">' + d.congested_weeks + ' Wks</span></div>';
+            }).join('');
+        } catch(e) {}
+    }
+
+    async function _mLoadWorstClusters() {
+        try {
+            var res = await fetch('/api/map/worst_clusters'); var data = await res.json();
+            document.getElementById('mMrClusterList').innerHTML = (data.mr || []).map(function(c, i) {
+                return '<div class="cursor-pointer flex justify-between p-2 border-b bg-white hover:bg-blue-50" onclick="mFocusCluster(' + c.cluster_id + ',\'MR\',' + c.center_lat + ',' + c.center_lon + ')">' +
+                    '<span class="font-bold text-xs text-gray-700">#' + (i+1) + ' Cluster ' + c.cluster_id + ' (' + c.point_count + ' pts)</span>' +
+                    '<span class="bg-red-100 text-red-700 px-1 py-0.5 rounded text-[10px] font-bold">' + Number(c.avg_signal).toFixed(1) + ' dBm</span></div>';
+            }).join('') || '<p class="text-xs text-gray-400 p-2">No MR data.</p>';
+            document.getElementById('mOoklaClusterList').innerHTML = (data.ookla || []).map(function(c, i) {
+                return '<div class="cursor-pointer flex justify-between p-2 border-b bg-white hover:bg-purple-50" onclick="mFocusCluster(' + c.cluster_id + ',\'Ookla\',' + c.center_lat + ',' + c.center_lon + ')">' +
+                    '<span class="font-bold text-xs text-gray-700">#' + (i+1) + ' Cluster ' + c.cluster_id + ' (' + c.point_count + ' pts)</span>' +
+                    '<span class="bg-red-100 text-red-700 px-1 py-0.5 rounded text-[10px] font-bold">' + Number(c.avg_signal).toFixed(1) + ' dBm</span></div>';
+            }).join('') || '<p class="text-xs text-gray-400 p-2">No Ookla data.</p>';
+        } catch(e) {}
+    }
+
+    function mFocusCluster(clusterId, dataSource, lat, lng) {
+        _mMap.flyTo([lat, lng], 15, { animate: true, duration: 1.5 });
+        if (_mConnectionLines) { _mConnectionLines.forEach(function(l) { _mMap.removeLayer(l); }); _mConnectionLines = []; }
+        var targetLayer = (dataSource === 'MR') ? _mLayerMRHoles : _mLayerOoklaHoles;
+        targetLayer.eachLayer(function(marker) {
+            if (marker.options.clusterId === clusterId) {
+                var servCell = marker.options.servingCell || 'Unknown';
+                var siteId = servCell.split('_')[0].split('-')[0].toUpperCase();
+                var servingSite = _mSiteDataCache.find(function(s) { return s.site_id.toUpperCase() === siteId; });
+                if (servingSite) {
+                    var siteLatLng = L.latLng(servingSite.lat, servingSite.lng);
+                    var holeLatLng = marker.getLatLng();
+                    var line = L.polyline([holeLatLng, siteLatLng], { color: '#dc2626', weight: 1.5, dashArray: '5,5', opacity: 0.8 }).addTo(_mMap);
+                    var distM = _mMap.distance(holeLatLng, siteLatLng);
+                    line.bindTooltip(siteId + ': ' + (distM > 1000 ? (distM/1000).toFixed(2) + ' km' : Math.round(distM) + ' m'), { sticky: true });
+                    _mConnectionLines.push(line);
+                }
+            }
+        });
+    }
+
+    async function _mLoadMapData() {
+        document.getElementById('mLoading').classList.remove('hidden');
+        var params = new URLSearchParams();
+        var week = document.getElementById('mWeekSelect').value;
+        var region = document.getElementById('mRegionSelect').value;
+        if (week && week !== 'All') params.set('week', week);
+        if (region && region !== 'All') params.set('region', region);
+        try {
+            var res = await fetch('/api/sites?' + params.toString()); var data = await res.json();
+            if (data.error) { console.error('Map error:', data.error); return; }
+            var validSites = data.filter(function(s) { if (!s || !s.site_id) return false; var la = parseFloat(s.lat), ln = parseFloat(s.lng); return !isNaN(la) && !isNaN(ln) && (la !== 0 || ln !== 0); });
+            _mSiteDataCache = validSites;
+            _mMarkers.clearLayers(); _mCongestedMarkers.clearLayers(); _mHeatmapLayer.setLatLngs([]); _mClearCoverage(); _mSiteMarkerMap = {};
+            document.getElementById('mSiteCount').textContent = validSites.length.toLocaleString();
+            var mList = [], cList = [], heatPoints = [], congCount = 0;
+            validSites.forEach(function(site) {
+                site.lat = parseFloat(site.lat); site.lng = parseFloat(site.lng);
+                _mDrawSiteCoverage(site);
+                var isCongested = false;
+                if (site.sectors) {
+                    var areaStr = String(site.area_target || '').toLowerCase();
+                    var isUrban = areaStr.includes('urban') || areaStr.includes('kmc');
+                    var prbThreshold = isUrban ? 80.0 : 92.0;
+                    for (var si = 0; si < site.sectors.length; si++) { if (parseFloat(site.sectors[si].prb || 0) >= prbThreshold) { isCongested = true; break; } }
+                }
+                if (isCongested) { heatPoints.push([site.lat, site.lng, 1.0]); congCount++; }
+                var mColor = isCongested ? '#dc2626' : '#2563eb';
+                var icon = L.divIcon({ className: 'custom-pin', html: '<div style="background-color:' + mColor + ';width:14px;height:14px;border-radius:50%;border:2px solid white;box-shadow:0 2px 5px rgba(0,0,0,0.3);"></div>', iconSize: [14, 14] });
+                var popupContent = _mCreatePopupContent(site, isCongested);
+                var marker = L.marker([site.lat, site.lng], { icon: icon }).bindPopup(popupContent);
+                marker.on('click', function(e) { if (e.originalEvent.ctrlKey) { e.originalEvent.stopPropagation(); _mDrawSiteCoverage(site, true); } });
+                mList.push(marker); _mSiteMarkerMap[site.site_id.toUpperCase()] = marker;
+                if (isCongested) cList.push(L.marker([site.lat, site.lng], { icon: icon }).bindPopup(popupContent));
+            });
+            _mMarkers.addLayers(mList); _mCongestedMarkers.addLayers(cList);
+            if (heatPoints.length > 0) _mHeatmapLayer.setLatLngs(heatPoints);
+            document.getElementById('mCongCount').textContent = congCount.toLocaleString();
+        } catch(e) { console.error('Map load error:', e); }
+        finally { document.getElementById('mLoading').classList.add('hidden'); }
+    }
+
+    function _mCreatePopupContent(site, isCongestedRaw) {
+        var siteIdDisplay = site.site_id || 'UNKNOWN';
+        var opName = (site.operator && site.operator !== 'Unknown') ? site.operator.toUpperCase() : 'UNKNOWN';
+        var opClass = opName === 'CELCOM' ? 'badge-celcom' : opName === 'DIGI' ? 'badge-digi' : 'badge-normal';
+        var finalCongested = isCongestedRaw;
+        var headerClass = finalCongested ? 'header-congested' : '';
+        var statusBadge = finalCongested ? '<span class="badge badge-congested">CONGESTED</span>' : '<span class="badge badge-normal">HEALTHY</span>';
+        var areaStr = String(site.area_target || '').toLowerCase();
+        var isUrban = areaStr.includes('urban') || areaStr.includes('kmc');
+        var areaBadge = isUrban ? '<span class="badge badge-urban">URBAN</span>' : areaStr.includes('outside') ? '<span class="badge badge-outside">OUTSIDE</span>' : '<span class="badge" style="background:#6b7280;color:white;">' + (site.area_target || '-') + '</span>';
+        var modeStr = String(site.bau_nic || '').toLowerCase();
+        var isNIC = modeStr.includes('nic');
+        var modeBadge = isNIC ? '<span class="badge" style="background:#f97316;color:white;">NIC</span>' : '<span class="badge" style="background:#9ca3af;color:white;">BAU</span>';
+        var prbThreshold = isUrban ? 80.0 : 92.0;
+        var thptThreshold = isUrban ? (isNIC ? 7.0 : 5.0) : 3.0;
+        var kpiRows = '';
+        (site.sectors || []).forEach(function(sec) {
+            var u = parseFloat(sec.users || 0), p = parseFloat(sec.prb || 0), t = parseFloat(sec.thpt || 0), v = parseFloat(sec.vol || 0);
+            kpiRows += '<tr><td class="text-left pl-3 font-bold text-gray-700 border-r border-gray-200">' + (sec.name || 'Unknown') + '</td>' +
+                '<td class="text-center border-r border-gray-200">' + (sec.month || '-') + '</td>' +
+                '<td class="text-center ' + (u >= 120 ? 'val-alert' : '') + ' border-r border-gray-200">' + Math.round(u) + '</td>' +
+                '<td class="text-center ' + (p >= prbThreshold ? 'val-alert' : '') + ' border-r border-gray-200">' + p.toFixed(2) + '</td>' +
+                '<td class="text-center ' + (t > 0 && t < thptThreshold ? 'val-alert' : '') + ' border-r border-gray-200">' + t.toFixed(2) + '</td>' +
+                '<td class="text-center">' + v.toFixed(2) + '</td></tr>';
+        });
+        var popupId = 'mpopup_' + siteIdDisplay.replace(/[^a-zA-Z0-9]/g, '_');
+        return '<div id="' + popupId + '">' +
+            '<div class="popup-header ' + headerClass + '">' +
+            '<div><div class="popup-title">' + siteIdDisplay + '</div><div class="popup-sub">' + (site.cluster || '') + ' | Region: ' + (site.region || '-') + '</div></div>' +
+            '<div class="flex gap-2 items-center mt-1"><span class="badge ' + opClass + '">' + opName + '</span>' + statusBadge + areaBadge + modeBadge + '</div>' +
+            '<button class="header-btn" onclick="mOpenPlotModal(\'' + siteIdDisplay + '\')"><i class="fas fa-chart-line mr-1"></i> Forecast Plots</button>' +
+            '</div>' +
+            '<div class="p-4"><div class="sector-table-container"><table class="sector-table w-full text-xs"><thead><tr class="bg-gray-100 text-gray-600"><th class="text-left pl-3 py-2">Sector</th><th class="text-center">Mth</th><th class="text-center">Users</th><th class="text-center">PRB%</th><th class="text-center">Thpt</th><th class="text-center">Vol</th></tr></thead><tbody>' + kpiRows + '</tbody></table></div></div>' +
+            '</div>';
+    }
+
+    function _mGetAnnulusSector(lat, lng, azimuth, innerR, outerR, bw) {
+        var R = 6378137, sa = (azimuth - bw/2) * (Math.PI/180), ea = (azimuth + bw/2) * (Math.PI/180);
+        var laR = lat*(Math.PI/180), lgR = lng*(Math.PI/180);
+        function gp(r, a) { var d=r/R, pL=Math.asin(Math.sin(laR)*Math.cos(d)+Math.cos(laR)*Math.sin(d)*Math.cos(a)), pG=lgR+Math.atan2(Math.sin(a)*Math.sin(d)*Math.cos(laR),Math.cos(d)-Math.sin(laR)*Math.sin(pL)); return [pL*(180/Math.PI), pG*(180/Math.PI)]; }
+        var pts = [];
+        for (var i=0; i<=10; i++) pts.push(gp(outerR, sa+(ea-sa)*(i/10)));
+        if (innerR > 0) { for (var j=10; j>=0; j--) pts.push(gp(innerR, sa+(ea-sa)*(j/10))); } else pts.push([lat,lng]);
+        return pts;
+    }
+
+    function _mDrawSiteCoverage(site, forceAdd) {
+        if (!site.coverage) return;
+        var azGroups = {};
+        site.coverage.forEach(function(sec) { if (!azGroups[sec.az]) azGroups[sec.az]={}; azGroups[sec.az][sec.tech]=sec; });
+        Object.entries(azGroups).forEach(function(entry) {
+            var az = parseFloat(entry[0]), techs = entry[1];
+            var cfg = [{tech:'5G',inner:0,outer:0.25,color:'#eab308',layer:_mLayer5G},{tech:'4G',inner:0.25,outer:0.50,color:'#3b82f6',layer:_mLayer4G},{tech:'2G',inner:0.75,outer:1.00,color:'#6b7280',layer:_mLayer2G}];
+            var maxRad = Math.max.apply(null, Object.values(techs).map(function(t) { return t.rad || 1000; }));
+            cfg.forEach(function(c) {
+                if (techs[c.tech]) {
+                    var bw = techs[c.tech].bw || 65;
+                    var poly = L.polygon(_mGetAnnulusSector(site.lat, site.lng, az, maxRad*c.inner, maxRad*c.outer, bw), { color:c.color, weight:1, fillOpacity:0.5 });
+                    poly.addTo(c.layer);
+                    if (forceAdd) { poly.addTo(_mMap); _mActiveCoverageLayers.push(poly); }
+                }
+            });
+        });
+    }
+
+    function _mClearCoverage() {
+        _mActiveCoverageLayers.forEach(function(l) { _mMap.removeLayer(l); }); _mActiveCoverageLayers = [];
+        if (_mConnectionLines) { _mConnectionLines.forEach(function(l) { _mMap.removeLayer(l); }); _mConnectionLines = []; }
+    }
+
+    function mZoomToSite(id) {
+        id = id.toUpperCase().trim();
+        if (_mSiteMarkerMap[id]) { _mMarkers.zoomToShowLayer(_mSiteMarkerMap[id], function() { _mSiteMarkerMap[id].openPopup(); }); }
+    }
+
+    function _mSetupAutocomplete() {
+        var input = document.getElementById('mSiteSearchInput');
+        var results = document.getElementById('mSiteSearchResults');
+        input.addEventListener('input', async function() {
+            var q = input.value.trim();
+            if (q.length < 2) { results.classList.add('hidden'); return; }
+            var res = await fetch('/api/site_ids?q=' + q); var data = await res.json();
+            results.innerHTML = data.map(function(id) { return '<div class="map-autocomplete-item">' + id + '</div>'; }).join('');
+            results.classList.remove('hidden');
+            results.querySelectorAll('.map-autocomplete-item').forEach(function(item) {
+                item.addEventListener('click', function() { input.value = item.textContent; results.classList.add('hidden'); mZoomToSite(input.value); });
+            });
+        });
+    }
+
+    function mTriggerZoom() { mZoomToSite(document.getElementById('mSiteSearchInput').value); }
+
+    function mToggleSidebar() {
+        var sidebar = document.getElementById('mapSidebar');
+        var toggleBtn = document.getElementById('mapSidebarToggle');
+        var mapEl = document.getElementById('mapLeaflet');
+        sidebar.classList.toggle('collapsed');
+        toggleBtn.classList.toggle('collapsed');
+        mapEl.classList.toggle('expanded');
+        var icon = toggleBtn.querySelector('i');
+        if (sidebar.classList.contains('collapsed')) { icon.classList.replace('fa-chevron-left','fa-chevron-right'); }
+        else { icon.classList.replace('fa-chevron-right','fa-chevron-left'); }
+        setTimeout(function() { _mMap.invalidateSize(); }, 300);
+    }
+
+    function mTogglePanel(panelId) {
+        ['mAnnotationPanel','mNotesPanel','mTasksPanel'].forEach(function(id) { if (id !== panelId) document.getElementById(id).classList.remove('open'); });
+        document.getElementById(panelId).classList.toggle('open');
+        if (panelId === 'mAnnotationPanel') mLoadAnnotations();
+        if (panelId === 'mNotesPanel') _mLoadNotes();
+        if (panelId === 'mTasksPanel') _mLoadTasks();
+    }
+
+    function mToggleAllAnnotations() {
+        if (_mMap.hasLayer(_mDrawnItems)) { _mMap.removeLayer(_mDrawnItems); }
+        else { _mMap.addLayer(_mDrawnItems); }
+    }
+
+    // Plot modal
+    function mOpenPlotModal(siteId) {
+        _mCurrentModalSiteId = siteId;
+        document.getElementById('mModalSiteIdDisplay').textContent = siteId;
+        document.getElementById('mPlotModalOverlay').classList.add('open');
+        mRefreshPlot();
+    }
+    function mClosePlotModal() { document.getElementById('mPlotModalOverlay').classList.remove('open'); document.getElementById('mMapPlotContainer').innerHTML = ''; }
+    async function mRefreshPlot() {
+        if (!_mCurrentModalSiteId) return;
+        var container = document.getElementById('mMapPlotContainer'); var horizon = document.getElementById('mModalHorizonSelect').value;
+        container.innerHTML = '<div class="flex flex-col items-center justify-center h-full text-gray-500"><i class="fas fa-circle-notch fa-spin text-4xl mb-3 text-pink-500"></i><p class="font-semibold">Generating forecast...</p></div>';
+        try {
+            var resp = await fetch('/plot?site_id=' + encodeURIComponent(_mCurrentModalSiteId) + '&forecast_horizon=' + horizon);
+            var json = await resp.json();
+            if (json.plot_image) { container.innerHTML = ''; Bokeh.embed.embed_item(JSON.parse(json.plot_image), 'mMapPlotContainer'); }
+            else container.innerHTML = '<div class="text-red-500 font-bold p-10 text-center">No data found</div>';
+        } catch(e) { container.innerHTML = '<div class="text-red-500 font-bold p-10 text-center">Error loading plots.</div>'; }
+    }
+
+    // Annotations
+    async function mLoadAnnotations() {
+        var status = document.getElementById('mAnnFilterStatus').value;
+        var url = status ? '/api/annotations?status=' + status : '/api/annotations';
+        try {
+            var res = await fetch(url); var anns = await res.json();
+            _mDrawnItems.clearLayers();
+            var list = document.getElementById('mAnnotationsList');
+            if (!anns.length) { list.innerHTML = '<div class="text-center text-gray-400 text-xs mt-10">No annotations found.</div>'; return; }
+            list.innerHTML = '';
+            anns.forEach(function(ann) {
+                var layer;
+                if (ann.shape_type === 'circle') layer = L.circle([ann.center_lat, ann.center_lng], { radius: ann.radius_meters, color: ann.color, fillColor: ann.fill_color, weight: 2 });
+                else if (ann.shape_type === 'polygon' && ann.geojson) layer = L.geoJSON(JSON.parse(ann.geojson), { style: { color: ann.color, fillColor: ann.fill_color, weight: 2 } });
+                else layer = L.marker([ann.center_lat, ann.center_lng]);
+                layer.bindPopup('<div class="font-bold text-blue-800 text-sm border-b pb-1 mb-1">' + ann.title + '</div><div class="text-xs text-gray-600">' + (ann.description || '') + '</div>');
+                _mDrawnItems.addLayer(layer);
+                var prioColor = ann.priority === 'critical' ? 'bg-red-100 text-red-700' : ann.priority === 'high' ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-600';
+                var card = document.createElement('div');
+                card.className = 'bg-white p-3 rounded-lg border border-gray-200 shadow-sm cursor-pointer hover:border-blue-300 mb-2';
+                card.onclick = function() { _mMap.flyTo([ann.center_lat, ann.center_lng], 16); };
+                card.innerHTML = '<div class="flex justify-between items-start mb-1"><span class="font-bold text-gray-800 text-sm truncate pr-2">' + ann.title + '</span><span class="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded ' + prioColor + '">' + ann.priority + '</span></div>' +
+                    '<div class="text-xs text-gray-500 mb-1">' + (ann.description || '<i>No notes</i>') + '</div>' +
+                    '<div class="text-[10px] text-gray-400 border-t pt-1">' + ann.created_by_username + ' · ' + new Date(ann.created_at).toLocaleDateString() + '</div>';
+                list.appendChild(card);
+            });
+        } catch(e) { document.getElementById('mAnnotationsList').innerHTML = '<div class="text-center text-red-500 text-xs mt-10">Error loading.</div>'; }
+    }
+
+    async function _mLoadNotes() {
+        var listEl = document.getElementById('mNoteList');
+        listEl.innerHTML = '<div class="text-center text-gray-400 py-8"><i class="fas fa-circle-notch fa-spin"></i></div>';
+        try {
+            var res = await fetch('/api/annotations'); var all = await res.json();
+            var myU = window.USER_DATA && window.USER_DATA.username;
+            var notes = all.filter(function(a) { return (!a.assignees || a.assignees.length === 0) && a.created_by_username === myU; });
+            if (!notes.length) { listEl.innerHTML = '<div class="text-center text-purple-300 py-8 text-sm">No notes yet.</div>'; return; }
+            listEl.innerHTML = notes.map(function(n) { return '<div class="bg-purple-50 border border-purple-200 rounded p-2 mb-2 cursor-pointer hover:bg-purple-100" onclick="_mMap.flyTo([' + n.center_lat + ',' + n.center_lng + '],16)"><div class="font-bold text-purple-800 text-sm">' + n.title + '</div><div class="text-xs text-purple-500">' + (n.description || '') + '</div></div>'; }).join('');
+        } catch(e) { listEl.innerHTML = '<div class="text-red-400 text-sm text-center py-4">Failed to load.</div>'; }
+    }
+
+    async function _mLoadTasks() {
+        var listEl = document.getElementById('mTaskList');
+        listEl.innerHTML = '<div class="text-center text-gray-400 py-8"><i class="fas fa-circle-notch fa-spin"></i></div>';
+        try {
+            var res = await fetch('/api/annotations'); var all = await res.json();
+            var myU = window.USER_DATA && window.USER_DATA.username;
+            var tasks = all.filter(function(a) {
+                var assigneeU = (a.assignees || []).map(function(x) { return x.username; });
+                return (assigneeU.includes(myU) && a.created_by_username !== myU) || (a.created_by_username === myU && (a.assignees || []).length > 0);
+            });
+            if (!tasks.length) { listEl.innerHTML = '<div class="text-center text-amber-300 py-8 text-sm">No tasks found.</div>'; return; }
+            listEl.innerHTML = tasks.map(function(t) { return '<div class="bg-amber-50 border border-amber-200 rounded p-2 mb-2"><div class="font-bold text-amber-800 text-sm">' + t.title + '</div><div class="text-xs text-amber-600">' + (t.status) + ' · ' + (t.priority) + '</div></div>'; }).join('');
+        } catch(e) { listEl.innerHTML = '<div class="text-red-400 text-sm text-center py-4">Failed to load.</div>'; }
+    }
+
+    // Coverage holes
+    function _mLoadCoverageHoles() {
+        fetch('/api/map/holes').then(function(r) { return r.json(); }).then(function(data) {
+            if (!data.features || !data.features.length) return;
+            _mLayerMRHoles.clearLayers(); _mLayerOoklaHoles.clearLayers(); _mLayerNoise.clearLayers();
+            data.features.forEach(function(f) {
+                var props = f.properties; var latlng = [f.geometry.coordinates[1], f.geometry.coordinates[0]];
+                var color = _mGetClusterColor(props.cluster); var marker;
+                if (props.cluster === -1) {
+                    marker = L.circleMarker(latlng, { radius: 3, color: '#000', fillColor: '#000', fillOpacity: 0.8, weight: 1 }).addTo(_mLayerNoise);
+                } else if (props.data_source === 'Ookla') {
+                    var ooklaIcon = L.divIcon({ className: 'custom-div-icon', html: '<div class="shape-triangle" style="border-bottom-color:' + color + ';"></div>', iconSize: [12, 12] });
+                    marker = L.marker(latlng, { icon: ooklaIcon, clusterId: props.cluster, servingCell: props.serving_cell }).addTo(_mLayerOoklaHoles);
+                } else {
+                    var mrIcon = L.divIcon({ className: 'custom-div-icon', html: '<div class="shape-square" style="background-color:' + color + ';"></div>', iconSize: [10, 10] });
+                    marker = L.marker(latlng, { icon: mrIcon, clusterId: props.cluster, servingCell: props.serving_cell }).addTo(_mLayerMRHoles);
+                }
+                marker.on('click', function() {
+                    if (_mConnectionLines) { _mConnectionLines.forEach(function(l) { _mMap.removeLayer(l); }); _mConnectionLines = []; }
+                    var servCell = props.serving_cell || 'Unknown'; if (servCell === 'Unknown') { marker.bindPopup('<strong>' + props.data_source + '</strong>').openPopup(); return; }
+                    var siteId = servCell.split('_')[0].split('-')[0].toUpperCase();
+                    var servingSite = _mSiteDataCache.find(function(s) { return s.site_id.toUpperCase() === siteId; });
+                    if (servingSite) {
+                        var sL = L.latLng(servingSite.lat, servingSite.lng), hL = L.latLng(latlng[0], latlng[1]);
+                        var dist = _mMap.distance(hL, sL); var distD = dist > 1000 ? (dist/1000).toFixed(2) + ' km' : Math.round(dist) + ' m';
+                        var line = L.polyline([hL, sL], { color: 'red', weight: 2, dashArray: '5,5' }).addTo(_mMap); _mConnectionLines.push(line);
+                        marker.bindPopup('<strong>' + props.data_source + '</strong><br>Signal: ' + props.signal + ' dBm<br>Serving: ' + props.serving_cell + '<br><b style="color:#dc2626">Dist: ' + distD + '</b>').openPopup();
+                    }
+                });
+            });
+        }).catch(function(e) { console.error('Coverage holes error', e); });
+    }
+
+    function _mGetClusterColor(id) {
+        if (id === -1) return '#000000';
+        var colors = ['#FF0000','#00FF00','#0000FF','#FFA500','#800080','#00FFFF','#FF00FF','#FFFF00','#A52A2A','#008080'];
+        return colors[id % colors.length];
+    }
+
+    // Admin Pricing (reuse same API as map.html)
+    function mOpenAdminPricing() {
+        document.getElementById('mAdminPricingModal').classList.remove('hidden');
+        fetch('/api/pricing').then(function(r) { return r.json(); }).then(function(data) {
+            if (!data.EQ) { document.getElementById('mAdminPricingFormArea').innerHTML = '<div class="text-center text-red-500">Failed to load pricing.</div>'; return; }
+            var html = '<div class="grid grid-cols-2 gap-6">';
+            html += '<div><h4 class="font-bold text-blue-800 border-b pb-2 mb-4">Equipment (EQ) Costs</h4><div class="space-y-3">';
+            Object.entries(data.EQ).forEach(function(e) { var price = typeof e[1] === 'object' ? e[1].price : e[1]; html += '<div class="flex items-center justify-between"><label class="text-xs font-semibold text-gray-600 w-1/2">' + e[0] + '</label><div class="relative w-1/2"><span class="absolute left-2 top-1.5 text-xs text-gray-400">RM</span><input type="number" data-orig-key="' + e[0] + '" data-type="EQ" value="' + price + '" class="w-full border rounded pl-8 pr-2 py-1 text-sm font-bold text-right outline-none"></div></div>'; });
+            html += '</div></div><div><h4 class="font-bold text-green-800 border-b pb-2 mb-4">Engineering Services (ES) Costs</h4><div class="space-y-3">';
+            Object.entries(data.ES).forEach(function(e) { var price = typeof e[1] === 'object' ? e[1].price : e[1]; html += '<div class="flex items-center justify-between"><label class="text-xs font-semibold text-gray-600 w-1/2">' + e[0] + '</label><div class="relative w-1/2"><span class="absolute left-2 top-1.5 text-xs text-gray-400">RM</span><input type="number" data-orig-key="' + e[0] + '" data-type="ES" value="' + price + '" class="w-full border rounded pl-8 pr-2 py-1 text-sm font-bold text-right outline-none"></div></div>'; });
+            html += '</div></div></div>';
+            document.getElementById('mAdminPricingFormArea').innerHTML = html;
+        });
+    }
+
+    function mSaveAdminPricing() {
+        var inputs = document.querySelectorAll('#mAdminPricingFormArea input');
+        var payload = { EQ: {}, ES: {} };
+        inputs.forEach(function(input) { payload[input.getAttribute('data-type')][input.getAttribute('data-orig-key')] = { price: parseFloat(input.value) || 0 }; });
+        fetch('/api/pricing', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).then(function(r) { return r.json(); }).then(function(res) { alert(res.message || 'Pricing Updated'); document.getElementById('mAdminPricingModal').classList.add('hidden'); });
+    }
+
+    window.mOpenSectorPricingModal = function(sectorDataStr) {
+        var sectors = JSON.parse(unescape(sectorDataStr));
+        var panel = document.getElementById('mSectorPricingPanel');
+        var content = document.getElementById('mSectorPricingContent');
+        var html = ''; var siteTotal = 0;
+        Object.keys(sectors).sort().forEach(function(secId) {
+            var sec = sectors[secId]; if (!sec.capex || !sec.is_congested) return;
+            var c = sec.capex; siteTotal += c.total_capex;
+            var shortSec = secId.split('_').pop() || '?';
+            html += '<div class="bg-white border border-gray-200 rounded-lg p-3 mb-4 shadow-sm"><div class="flex justify-between border-b pb-2 mb-2"><span class="font-bold text-blue-700">Sector ' + shortSec + '</span><span class="font-bold text-green-700">RM ' + c.total_capex.toLocaleString('en-MY', {minimumFractionDigits:2}) + '</span></div>' + c.eq_breakdown.map(function(eq) { return '<div class="flex justify-between text-xs mb-1"><span>- ' + eq[0] + '</span><span>RM ' + eq[1].toLocaleString('en-MY',{minimumFractionDigits:2}) + '</span></div>'; }).join('') + '</div>';
+        });
+        if (!html) html = '<div class="text-center text-gray-500 text-sm mt-10">No CAPEX required.</div>';
+        else html = '<div class="bg-gray-800 text-white rounded-lg p-4 mb-4 text-center"><div class="text-[10px] uppercase font-bold text-gray-400 mb-1">Total Estimated Site CAPEX</div><div class="text-2xl font-bold text-green-400">RM ' + siteTotal.toLocaleString('en-MY',{minimumFractionDigits:2}) + '</div></div>' + html;
+        content.innerHTML = html;
+        panel.classList.add('open');
+    };
     </script>
 </body>
 </html>
