@@ -17,7 +17,6 @@
     <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 
     <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
-        
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
 
@@ -26,9 +25,11 @@
     <script src="https://cdn.bokeh.org/bokeh/release/bokeh-tables-3.9.0.min.js"></script>
     <script src="https://cdn.bokeh.org/bokeh/release/bokeh-api-3.9.0.min.js"></script>
 
+    <script src="https://unpkg.com/@superset-ui/embedded-sdk"></script>
+
     <style>
         body, html { height: 100%; margin: 0; font-family: 'Inter', sans-serif; background: #f3f4f6; overflow: hidden; }
-        #sidebar { position: absolute; top: 0; left: 0; bottom: 0; width: 350px; background-color: #ffffff; color: #1f2937; z-index: 1000; padding: 20px; box-shadow: 2px 0 15px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 15px; border-right: 1px solid #e5e7eb; overflow-y: auto; }
+        #sidebar { position: absolute; top: 0; left: 0; bottom: 0; width: 350px; background-color: #ffffff; color: #1f2937; z-index: 1000; padding: 20px; box-shadow: 2px 015px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 15px; border-right: 1px solid #e5e7eb; overflow-y: auto; }
         #map { position: absolute; top: 0; right: 0; bottom: 0; left: 350px; z-index: 1; }
         .control-group { background: #f9fafb; padding: 12px; border-radius: 8px; border: 1px solid #e5e7eb; }
         .control-label { font-size: 0.7rem; font-weight: 700; color: #4b5563; text-transform: uppercase; margin-bottom: 6px; display: block; }
@@ -87,7 +88,7 @@
         /* Sidebar Collapsing Animations */
         #sidebar { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         #sidebar.collapsed { transform: translateX(-100%); }
-        
+
         #sidebarToggle {
             position: absolute; left: 350px; top: 50%; transform: translateY(-50%); width: 24px; height: 48px; background: #2563eb; border: none; border-radius: 0 8px 8px 0; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 1000; box-shadow: 2px 0 10px rgba(0,0,0,0.1); transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.2s;
         }
@@ -95,14 +96,14 @@
         #sidebarToggle.collapsed { left: 0; }
         #sidebarToggle i { transition: transform 0.2s; }
         #sidebarToggle.collapsed i { transform: rotate(180deg); }
-        
+
         #map { transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         #map.expanded { left: 0; }
-        
+
         /* Colorful Toolbar Buttons */
         .tool-icon-btn { position: absolute; z-index: 1200; color: white; border: none; border-radius: 50%; width: 42px; height: 42px; font-size: 1rem; cursor: pointer; display: flex !important; align-items: center !important; justify-content: center !important; box-shadow: 0 4px 14px rgba(0,0,0,0.2); transition: all 0.2s, left 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         .tool-icon-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0,0,0,0.3); }
-        
+
         /* Dynamic Button Positions */
         #annotationBtn { top: 10px; left: 370px; background: #1d4ed8; }
         #notesBtn { top: 10px; left: 422px; background: #6d28d9; }
@@ -111,7 +112,7 @@
         #tasksBtn { top: 10px; left: 578px; background: #d97706; }
         #reviewBtn { top: 10px; left: 630px; background: #ea580c; }
         #showAnnotationsBtn { top: 62px; left: 370px; background: #1d4ed8; }
-        
+
         /* Adjust positions when sidebar collapses */
         #sidebar.collapsed ~ #sidebarToggle,
         #sidebar.collapsed ~ #annotationBtn { left: 30px !important; }
@@ -121,7 +122,14 @@
         #sidebar.collapsed ~ #tasksBtn { left: 238px !important; }
         #sidebar.collapsed ~ #reviewBtn { left: 290px !important; }
         #sidebar.collapsed ~ #showAnnotationsBtn { left: 30px !important; }
-        
+
+        /* Add this right after #reviewBtn */
+        #dashboardBtn { top: 10px; left: 682px; background: #0ea5e9; }
+        #sidebar.collapsed ~ #dashboardBtn { left: 342px !important; }
+
+        /* Add this to force the embedded iframe to fill the container */
+        #supersetEmbedContainer iframe { width: 100%; height: 100%; border: none; }
+
         /* Sliding Panels */
         .sliding-panel { position: absolute; top: 0; right: 0; bottom: 0; width: 360px; background: #ffffff; z-index: 1500; display: flex; flex-direction: column; box-shadow: -4px 0 20px rgba(0,0,0,0.12); border-left: 1px solid #e5e7eb; transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); }
         .sliding-panel.open { transform: translateX(0); }
@@ -145,7 +153,7 @@
         .notes-panel-header { background: linear-gradient(135deg, #4c1d95 0%, #7c3aed 100%); color: white; padding: 16px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
         .note-card { background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 10px; padding: 12px; cursor: pointer; transition: all 0.2s; border-left: 4px solid #7c3aed; margin-bottom: 8px; }
         .note-card:hover { background: #f3e8ff; box-shadow: 0 2px 8px rgba(124,58,237,0.15); }
-        
+
         .tasks-header { background: linear-gradient(135deg, #92400e 0%, #d97706 100%); color: white; padding: 16px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
         .task-card { background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 12px; cursor: pointer; transition: all 0.2s; border-left: 4px solid #d97706; margin-bottom: 8px; }
         .task-card:hover { background: #fef3c7; box-shadow: 0 2px 8px rgba(217,119,6,0.15); }
@@ -170,9 +178,9 @@
         .task-stat { text-align: center; }
         .task-stat-num { font-size: 1.1rem; font-weight: 900; color: #92400e; line-height: 1; }
         .task-stat-label { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; color: #b45309; margin-top: 1px; }
-        .task-loc-btn { font-size: 0.65rem; background: #fef3c7; color: #92400e; border: 1px solid #fde68a; border-radius: 4px; padding: 2px 7px; font-weight: 700; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+        .task-loc-btn { font-size: 0.65rem; background: #fef3c7; color: #92400e; border: 1px solid #fde68a; border-radius: 4px; padding: 2px 7px; font-weight: 700; cursor:pointer; transition: all 0.15s; white-space: nowrap; }
         .task-loc-btn:hover { background: #fde68a; }
-        
+
         .comment-bubble { background: #f1f5f9; border-radius: 8px; padding: 8px 12px; margin-bottom: 8px; }
         .comment-bubble .author { font-size: 0.7rem; font-weight: 700; color: #2563eb; }
         .comment-bubble .body { font-size: 0.8rem; color: #374151; margin-top: 2px; }
@@ -182,9 +190,8 @@
         .draw-tool-btn { display: flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 7px; border: 1px solid #e5e7eb; background: white; font-size: 0.72rem; font-weight: 700; cursor: pointer; transition: all 0.15s; color: #374151; }
         .draw-tool-btn:hover { background: #eff6ff; border-color: #93c5fd; color: #1d4ed8; transform: translateY(-1px); }
         .draw-tool-btn.active { background: #dbeafe; border-color: #2563eb; color: #1d4ed8; }
-        
+
         .ann-card-hidden { opacity: 0.45; background: #f1f5f9 !important; }
-		
     </style>
 </head>
 <body>
@@ -192,11 +199,11 @@
     <!-- CRITICAL: User Session Injection so JS doesn't crash -->
     <script>
         window.APP_CONFIG = { role: "{{ role }}" };
-        window.USER_DATA = { 
-            userId: {{ user_id | tojson | safe }}, 
-            username: "{{ username }}", 
-            fullName: "{{ full_name }}", 
-            role: "{{ role }}" 
+        window.USER_DATA = {
+            userId: {{ user_id | tojson | safe }},
+            username: "{{ username }}",
+            fullName: "{{ full_name }}",
+            role: "{{ role }}"
         };
     </script>
 
@@ -205,10 +212,10 @@
     </button>
 
     <div id="sidebar">
-		<a href="/" class="inline-flex items-center gap-2 text-xs font-semibold text-blue-600 hover:text-blue-800 mb-3 transition-colors duration-200">
-		    <i class="fas fa-arrow-left"></i> Back to Dashboard
-		</a>
-    
+                <a href="/" class="inline-flex items-center gap-2 text-xs font-semibold text-blue-600 hover:text-blue-800 mb-3 transition-colors duration-200">
+                    <i class="fas fa-arrow-left"></i> Back to Dashboard
+                </a>
+
         <div>
             <h1 class="text-xl font-bold flex items-center gap-3 text-gray-800 mb-1"><i class="fas fa-satellite text-blue-600"></i> NetAlytics</h1>
             <p class="text-xs text-gray-500">Advanced Site Topology & AI Forecast</p>
@@ -284,6 +291,9 @@
     <button id="reviewBtn" class="tool-icon-btn" onclick="openReviewModal()" title="Submit Review">
         <i class="fas fa-star"></i>
     </button>
+    <button id="dashboardBtn" class="tool-icon-btn" onclick="openSupersetDashboard()" title="NetAlytics Dashboard">
+        <i class="fas fa-chart-pie"></i>
+    </button>
 
     <div id="annotationPanel" class="sliding-panel">
         <div class="panel-resize-handle" id="annotationResizeHandle" title="Drag to resize"></div>
@@ -319,7 +329,7 @@
             <div class="text-center text-gray-400 text-sm mt-10"><i class="fas fa-circle-notch fa-spin"></i> Loading...</div>
         </div>
     </div>
-    
+
     <div id="tasksPanel" class="sliding-panel" style="width: 380px;">
         <div class="panel-resize-handle" id="tasksResizeHandle" title="Drag to resize"></div>
         <div class="tasks-header">
@@ -475,13 +485,26 @@
         </div>
     </div>
 
+    <div id="supersetModal" class="hidden fixed inset-0 bg-black bg-opacity-75 z-[6000] flex items-center justify-center">
+        <div class="bg-white rounded-xl shadow-2xl w-[95vw] h-[95vh] flex flex-col overflow-hidden">
+            <div class="bg-gray-800 text-white p-3 flex justify-between items-center flex-shrink-0">
+                <h3 class="font-bold text-lg"><i class="fas fa-chart-pie mr-2"></i> Network Analytics Dashboard</h3>
+                <button onclick="closeSupersetDashboard()" class="text-gray-300 hover:text-white text-xl transition-colors">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div id="supersetEmbedContainer" class="flex-1 w-full h-full bg-gray-100 overflow-hidden">
+            </div>
+        </div>
+    </div>
+
     <div id="sectorPricingPanel" class="hidden fixed inset-0 bg-black bg-opacity-50 z-[6000] flex items-center justify-center">
         <div class="bg-gray-50 rounded-2xl shadow-2xl w-full max-w-lg mx-4 flex flex-col overflow-hidden">
             <div class="bg-gradient-to-r from-green-600 to-teal-600 p-4 text-white flex justify-between items-center shadow-md">
                 <h3 class="font-bold text-lg flex items-center gap-2">
                     <i class="fas fa-file-invoice-dollar"></i> CAPEX Breakdown
                 </h3>
-                <button onclick="document.getElementById('sectorPricingPanel').classList.add('hidden')" class="text-white hover:text-green-200 text-xl transition-transform hover:scale-110">
+                <button onclick="document.getElementById('sectorPricingPanel').classList.add('hidden')" class="text-white hover:text-green-200 text-xl transition-transformhover:scale-110">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -619,7 +642,7 @@
                     </div>
                     <div class="p-2 border-b border-gray-100 flex gap-2">
                         <button onclick="showNewConversation()" class="flex-1 bg-blue-600 text-white text-xs font-semibold py-1.5 rounded-lg hover:bg-blue-700 transition flex items-center justify-center gap-1"><i class="fas fa-plus"></i> DM</button>
-                        <button onclick="showNewGroup()" class="flex-1 bg-purple-600 text-white text-xs font-semibold py-1.5 rounded-lg hover:bg-purple-700 transition flex items-center justify-center gap-1"><i class="fas fa-users"></i> Group</button>
+                        <button onclick="showNewGroup()" class="flex-1 bg-purple-600 text-white text-xs font-semibold py-1.5 rounded-lg hover:bg-purple-700 transition flexitems-center justify-center gap-1"><i class="fas fa-users"></i> Group</button>
                     </div>
                     <div id="conversationList" class="flex-1 overflow-y-auto"></div>
                 </div>
@@ -681,7 +704,7 @@
                             <div id="emojiPicker" class="hidden mb-2 p-2 border border-gray-200 rounded-xl bg-white shadow-md"><div class="flex flex-wrap gap-1 max-h-28 overflow-y-auto text-lg leading-none"></div></div>
                             <div class="flex gap-2 items-center">
                                 <button onclick="toggleEmojiPicker()" title="Emoji" class="text-gray-400 hover:text-yellow-500 transition text-lg flex-shrink-0">😊</button>
-                                <input type="text" id="internalChatInput" placeholder="Type a message..." class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" onkeydown="if(event.key==='Enter')sendChatMessage()">
+                                <input type="text" id="internalChatInput" placeholder="Type a message..." class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-smfocus:ring-2 focus:ring-blue-500 outline-none" onkeydown="if(event.key==='Enter')sendChatMessage()">
                                 <button onclick="toggleMsgInChatSearch()" title="Search messages" class="text-gray-400 hover:text-blue-500 transition flex-shrink-0"><i class="fas fa-search text-sm"></i></button>
                                 <button onclick="sendChatMessage()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition flex-shrink-0"><i class="fas fa-paper-plane"></i></button>
                             </div>
@@ -707,52 +730,52 @@
             <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition"><i class="fas fa-paper-plane"></i></button>
         </form>
     </div>
-    
+
     <button id="chatToggleBtn" onclick="toggleChat()" class="fixed bottom-6 right-8 bg-blue-600 text-white w-14 h-14 rounded-full shadow-[0_4px_14px_rgba(0,0,0,0.3)] z-[6000] flex items-center justify-center text-2xl hover:bg-blue-700 hover:scale-105 transition-all">
         <i class="fas fa-comment-dots"></i>
     </button>
 
     <script>
-		async function checkSession() {
-		    try {
-		        const response = await fetch('/api/check_session');
-		        if (!response.ok) {
-		            // Session invalid, redirect to login or refresh
-		            console.warn('Session invalid, redirecting...');
-		            window.location.href = '/login?next=/map';
-		            return false;
-		        }
-		        return true;
-		    } catch (error) {
-		        console.error('Session check failed:', error);
-		        return false;
-		    }
-		}
+                async function checkSession() {
+                    try {
+                        const response = await fetch('/api/check_session');
+                        if (!response.ok) {
+                            // Session invalid, redirect to login or refresh
+                            console.warn('Session invalid, redirecting...');
+                            window.location.href = '/login?next=/map';
+                            return false;
+                        }
+                        return true;
+                    } catch (error) {
+                        console.error('Session check failed:', error);
+                        return false;
+                    }
+                }
         // --- 1. Map Initialization ---
-        var map = L.map('map', { 
-            zoomControl: false, 
+        var map = L.map('map', {
+            zoomControl: false,
             boxZoom: true,
-            preferCanvas: true 
+            preferCanvas: true
         }).setView([4.2105, 101.9758], 6);
         L.control.zoom({ position: 'topright' }).addTo(map);
 
         L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri', maxZoom: 19 }).addTo(map);
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', { attribution: '&copy;OpenStreetMap, &copy;CartoDB', subdomains: 'abcd', maxZoom: 19 }).addTo(map);
 
-        var siteDataCache = []; 
-        var activeCoverageLayers = []; 
-        var siteMarkerMap = {}; 
-        var connectionLines = []; 
+        var siteDataCache = [];
+        var activeCoverageLayers = [];
+        var siteMarkerMap = {};
+        var connectionLines = [];
 
         var markers = L.markerClusterGroup({ chunkedLoading: true, maxClusterRadius: 60, iconCreateFunction: function(c) { return new L.DivIcon({ html: '<div class="cluster-base cluster-normal"><span>' + c.getChildCount() + '</span></div>', className: 'marker-cluster', iconSize: new L.Point(40, 40) }); } });
         var congestedMarkers = L.markerClusterGroup({ chunkedLoading: true, maxClusterRadius: 60, iconCreateFunction: function(c) { return new L.DivIcon({ html: '<div class="cluster-base cluster-congested"><span>' + c.getChildCount() + '</span></div>', className: 'marker-cluster', iconSize: new L.Point(40, 40) }); } });
-        var heatmapLayer = L.heatLayer([], { radius: 40, blur: 25, maxZoom: 15, minOpacity: 0.6, gradient: { 0.3: 'blue', 0.5: 'lime', 0.7: 'yellow', 0.85: 'orange', 0.95: 'red' } });
+        var heatmapLayer = L.heatLayer([], { radius: 40, blur: 25, maxZoom: 15, minOpacity: 0.6, gradient: { 0.3: 'blue', 0.5: 'lime', 0.7: 'yellow', 0.85: 'orange', 0.95:'red' } });
 
         var layer5G = L.layerGroup(), layer4G = L.layerGroup(), layer3G = L.layerGroup(), layer2G = L.layerGroup();
-        
+
         var layerMRHoles = L.featureGroup().addTo(map);
         var layerOoklaHoles = L.featureGroup().addTo(map);
-        var layerNoise = L.layerGroup(); 
+        var layerNoise = L.layerGroup();
         map.addLayer(markers);
 
         var overlayMaps = {
@@ -771,13 +794,13 @@
 
         var currentModalSiteId = null;
 
-        async function init() { 
-            await loadWeeks(); 
-            await loadRegions(); 
-            await loadMapData(); 
+        async function init() {
+            await loadWeeks();
+            await loadRegions();
+            await loadMapData();
             loadLeaderboard();
-            loadWorstClusters(); 
-            setupAutocomplete(); 
+            loadWorstClusters();
+            setupAutocomplete();
             loadCoverageHoles();
             loadAnnotations();
         }
@@ -793,13 +816,13 @@
             });
         }
 
-        function updateFilters() { 
-            loadMapData(); 
-            loadLeaderboard(); 
+        function updateFilters() {
+            loadMapData();
+            loadLeaderboard();
         }
 
         async function loadWeeks() {
-            const res = await fetch('/api/weeks'); 
+            const res = await fetch('/api/weeks');
             const weeks = await res.json();
             if(weeks.length > 0) {
                 document.getElementById('weekSelect').innerHTML = weeks.map(w => `<option value="${w}">Week ${w}</option>`).join('');
@@ -808,10 +831,10 @@
 
         async function loadLeaderboard() {
             const week = document.getElementById('weekSelect').value;
-            const region = document.getElementById('regionSelect').value; 
+            const region = document.getElementById('regionSelect').value;
             const res = await fetch(`/api/map/top_congested?week=${week}&region=${region}`);
             const data = await res.json();
-            
+
             document.getElementById('leaderboardList').innerHTML = data.map((d, i) => `
                 <div class="leaderboard-item cursor-pointer flex justify-between p-2 border-b bg-white hover:bg-gray-100" onclick="zoomToSite('${d.zoom_sector_id.split('_')[0]}')">
                     <span class="font-bold text-gray-800 text-xs">#${i+1} ${d.zoom_sector_id}</span>
@@ -826,7 +849,7 @@
                 const data = await res.json();
 
                 document.getElementById('mrClusterList').innerHTML = data.mr.map((c, i) => `
-                    <div class="leaderboard-item cursor-pointer flex justify-between p-2 border-b bg-white hover:bg-blue-50" 
+                    <div class="leaderboard-item cursor-pointer flex justify-between p-2 border-b bg-white hover:bg-blue-50"
                           onclick="focusCluster(${c.cluster_id}, 'MR', ${c.center_lat}, ${c.center_lon})">
                         <span class="font-bold text-xs text-gray-700">#${i+1} Cluster ${c.cluster_id} (${c.point_count} pts)</span>
                         <span class="bg-red-100 text-red-700 px-1 py-0.5 rounded text-[10px] font-bold">${Number(c.avg_signal).toFixed(1)} dBm</span>
@@ -834,7 +857,7 @@
                 `).join('') || '<p class="text-xs text-gray-400 p-2">No MR data found.</p>';
 
                 document.getElementById('ooklaClusterList').innerHTML = data.ookla.map((c, i) => `
-                    <div class="leaderboard-item cursor-pointer flex justify-between p-2 border-b bg-white hover:bg-purple-50" 
+                    <div class="leaderboard-item cursor-pointer flex justify-between p-2 border-b bg-white hover:bg-purple-50"
                           onclick="focusCluster(${c.cluster_id}, 'Ookla', ${c.center_lat}, ${c.center_lon})">
                         <span class="font-bold text-xs text-gray-700">#${i+1} Cluster ${c.cluster_id} (${c.point_count} pts)</span>
                         <span class="bg-red-100 text-red-700 px-1 py-0.5 rounded text-[10px] font-bold">${Number(c.avg_signal).toFixed(1)} dBm</span>
@@ -872,20 +895,20 @@
 
         async function loadMapData(weekOverride = null) {
             document.getElementById('loading').classList.remove('hidden');
-            
+
             // NEW LOGIC: Construct the parameters directly from the Map's own sidebar dropdowns!
             const params = new URLSearchParams();
-            
+
             const currentWeek = weekOverride || document.getElementById('weekSelect').value;
             if (currentWeek && currentWeek !== 'All') {
                 params.set('week', currentWeek);
             }
-            
+
             const currentRegion = document.getElementById('regionSelect').value;
             if (currentRegion && currentRegion !== 'All') {
                 params.set('region', currentRegion);
             }
-            
+
             let url = `/api/sites?${params.toString()}`;
 
             try {
@@ -917,7 +940,7 @@
 
                 // Update the visible sites counter!
                 document.getElementById('siteCount').textContent = validSites.length.toLocaleString();
-                
+
                 const mList = []; const cList = []; const heatPoints = []; let congCount = 0;
 
                 // 3. LOOP SAFELY
@@ -983,14 +1006,14 @@
                 mat.classList.remove('hidden');
                 upg.classList.add('hidden');
                 btn.innerHTML = 'CONFIG & UPGRADE <i class="fas fa-arrow-right"></i>';
-            } 
+            }
             // STATE 2: MATRIX -> Show UPGRADE
             else if (!mat.classList.contains('hidden')) {
                 mat.classList.add('hidden');
                 upg.classList.remove('hidden');
                 kpi.classList.add('hidden');
                 btn.innerHTML = 'BACK TO KPI <i class="fas fa-undo"></i>';
-                
+
                 // Fetch Data on Demand
                 loadUpgradeData(popupId, siteId, week);
             }
@@ -1014,17 +1037,17 @@
                 .then(r => r.json())
                 .then(data => {
                     // PREVENTS THE UI FROM DRAWING BLANK DASHES IF THE API FAILS
-                    if (data.error || !data.sectors) { 
-                        contentDiv.innerHTML = `<div class="text-red-500 p-4 font-bold text-center text-sm"><i class="fas fa-exclamation-triangle"></i> Backend Error: ${data.error || 'Failed to load Upgrade Data'}</div>`; 
-                        return; 
+                    if (data.error || !data.sectors) {
+                        contentDiv.innerHTML = `<div class="text-red-500 p-4 font-bold text-center text-sm"><i class="fas fa-exclamation-triangle"></i> Backend Error: ${data.error || 'Failed to load Upgrade Data'}</div>`;
+                        return;
                     }
-                    
+
                     const bands = ['L9', 'L18', 'L21', 'L26'];
-                    
+
                     // Display Area Target
                     let targetBadge = '';
                     const areaStr = String(data.area_target || '').toLowerCase();
-                    
+
                     if(areaStr.includes('urban') || areaStr.includes('kmc')) {
                         targetBadge = '<span class="badge badge-urban">Urban/KMC (Div: 0.8)</span>';
                     } else {
@@ -1034,7 +1057,7 @@
                     // --- NEW LOGIC: EXTRACT THE HIGHEST CASE LABEL ---
                     let highestCase = "";
                     let highestCaseNum = 0;
-                    
+
                     Object.values(data.sectors).forEach(sec => {
                         if(sec.case_label && sec.case_label.includes('Case')) {
                             let match = sec.case_label.match(/Case (\d+)/);
@@ -1047,7 +1070,7 @@
                             }
                         }
                     });
-                    
+
                     let caseBadge = '';
                     if (highestCaseNum > 0) {
                         caseBadge = `<span class="bg-white text-red-600 px-3 py-1 rounded-full font-bold text-[11px] shadow-sm ml-3 border border-red-200">
@@ -1130,7 +1153,7 @@
                             if (type === 'upgrade') {
                                 const pct = secData.capacity_pct;
                                 const alert = pct > 73 ? 'text-red-600 font-extrabold' : 'text-green-600 font-extrabold';
-                                
+
                                 tbl += `<td class="text-center ${alert} bg-gray-50 border-l-2 border-gray-300 text-xs tracking-tight px-1 py-1.5">${Number(pct).toFixed(2)}%</td>`;
                                 tbl += `<td class="text-center text-red-600 font-bold bg-red-50 border-l-2 border-red-200 text-[10px] px-1 py-1.5 leading-tight" style="white-space:normal;">${secData.case_label || '-'}</td>`;
                             }
@@ -1142,9 +1165,9 @@
                     };
 
                     const hasCongestion = Object.values(data.sectors).some(s => s.is_congested);
-                    
+
                     html += buildMatrix('Current Configuration', 'current');
-                    
+
                     if (hasCongestion) {
                         html += buildMatrix('Recommended Upgrade (Iterative)', 'upgrade');
                     } else {
@@ -1159,11 +1182,11 @@
         }
 
         function createPopupContent(site, isCongestedRaw) {
-            const siteIdDisplay = site.site_id || "UNKNOWN"; 
+            const siteIdDisplay = site.site_id || "UNKNOWN";
             const opName = (site.operator && site.operator !== 'Unknown') ? site.operator.toUpperCase() : "UNKNOWN";
             const host = site.coverage?.[0]?.host || 'Self';
             const isFemto = site.coverage?.[0]?.femto || false;
-            
+
             let opClass = 'badge-normal';
             if (opName === 'CELCOM') opClass = 'badge-celcom';
             if (opName === 'DIGI') opClass = 'badge-digi';
@@ -1182,11 +1205,11 @@
             // --- [FIX 1] Area Target & Mode Badges ---
             let areaBadge = '';
             let modeBadge = '';
-            
+
             // Analyze Category (Urban/Outside)
             const areaStr = String(site.area_target || '').toLowerCase();
             const isUrban = areaStr.includes('urban') || areaStr.includes('kmc');
-            
+
             if (isUrban) {
                 areaBadge = '<span class="badge badge-urban">URBAN</span>';
             } else if (areaStr.includes('outside')) {
@@ -1198,7 +1221,7 @@
             // Analyze Mode (BAU/NIC)
             const modeStr = String(site.bau_nic || '').toLowerCase();
             const isNIC = modeStr.includes('nic');
-            
+
             if (isNIC) {
                 modeBadge = '<span class="badge" style="background:#f97316; color:white; border:1px solid #fdba74;">NIC</span>';
             } else {
@@ -1208,7 +1231,7 @@
             // --- [FIX 2] Dynamic Thresholds for Red Highlighting ---
             // PRB Threshold: 80% (Urban), 92% (Outside)
             const prbThreshold = isUrban ? 80.0 : 92.0;
-            
+
             // Throughput Threshold: 5 (Urban BAU), 7 (Urban NIC), 3 (Outside)
             let thptThreshold = 3.0; // Default Outside
             if (isUrban) {
@@ -1216,19 +1239,19 @@
             }
 
             // GENERATE KPI TABLE
-            let kpiRows = ''; 
+            let kpiRows = '';
             (site.sectors||[]).forEach(sec => {
-                const secName = sec.name || "Unknown"; 
+                const secName = sec.name || "Unknown";
                 const u = parseFloat(sec.users ?? 0);
                 const p = parseFloat(sec.prb ?? 0);
                 const t = parseFloat(sec.thpt ?? 0);
                 const v = parseFloat(sec.vol ?? 0);
-                
+
                 // Apply dynamic checks using variables defined above
                 const alertUser = (u >= 120) ? 'val-alert' : '';
                 const alertPrb = (p >= prbThreshold) ? 'val-alert' : '';
                 const alertThpt = (t > 0 && t < thptThreshold) ? 'val-alert' : '';
-                
+
                 kpiRows += `<tr>
                     <td class="text-left pl-3 font-bold text-gray-700 border-r border-gray-200">${secName}</td>
                     <td class="text-center border-r border-gray-200">${sec.month || '-'}</td>
@@ -1240,18 +1263,18 @@
             });
 
             // GENERATE INITIAL MATRIX (No changes needed here, logic is static)
-            const bands = ['L9', 'L18', 'L21', 'L26']; 
-            const matrixData = {}; 
+            const bands = ['L9', 'L18', 'L21', 'L26'];
+            const matrixData = {};
             const grouping = {};
 
             // Step 1: Group by Sector -> Carrier -> Band -> Push Cells
             (site.band_matrix||[]).forEach(bmd => {
                 const secName = bmd.sector || "Unknown";
                 if(!grouping[secName]) grouping[secName] = {F1:{}, F2:{}, F3:{}};
-                
+
                 const carrier = (bmd.f1f2f3 || 'Other').toUpperCase();
                 const rawBand = (bmd.band || '').toUpperCase();
-                let mappedBand = null; 
+                let mappedBand = null;
 
                 if (rawBand.includes('2600') || rawBand.includes('26') || rawBand.includes('L26')) mappedBand = 'L26';
                 else if (rawBand.includes('2100') || rawBand.includes('21') || rawBand.includes('L21')) mappedBand = 'L21';
@@ -1276,12 +1299,12 @@
                         if (cells && cells.length > 0) {
                             const isMM = cells.some(c => c.xtxr.includes('32T'));
                             const isExplicitBi = cells.some(c => c.xtxr.includes('2*') || c.xtxr.includes('2X'));
-                            
+
                             let count = cells.length; // Default to physical cell count (handles physical split sectors)
-                            
+
                             if (isMM) count = 4; // Massive MIMO = 4 Layers
                             else if (isExplicitBi) count = 2; // Tagged Bi-Sector = 2 Layers
-                            
+
                             matrixData[secId][f][b] = count;
                         } else {
                             matrixData[secId][f][b] = 0;
@@ -1294,17 +1317,17 @@
             const matrixRows = Object.keys(matrixData).sort().map(secId => {
                 const parts = secId.split('_');
                 const sectorNum = parts[parts.length-1] || '?';
-                const sepStyle = "border-r-2 border-gray-400"; 
-                
-                let row = `<tr><td title="${secId}" class="font-bold text-blue-700 bg-gray-50 text-left pl-3 ${sepStyle}">Sect ${sectorNum}</td>`; 
-                
+                const sepStyle = "border-r-2 border-gray-400";
+
+                let row = `<tr><td title="${secId}" class="font-bold text-blue-700 bg-gray-50 text-left pl-3 ${sepStyle}">Sect ${sectorNum}</td>`;
+
                 ['F1', 'F2', 'F3'].forEach(f => {
                     bands.forEach((b, i) => {
                         const isLast = (i === bands.length - 1);
                         const border = isLast ? sepStyle : 'border-r border-gray-200';
                         const count = matrixData[secId][f][b];
                         const isActive = count > 0;
-                        
+
                         // Prints the actual count instead of '1'
                         row += `<td class="text-center ${isActive?'matrix-yes':'matrix-no'} ${border}">${isActive ? count : '0'}</td>`;
                     });
@@ -1313,7 +1336,7 @@
             }).join('') || `<tr><td colspan="13" class="text-center text-gray-400 italic py-4">No band data available</td></tr>`;
 
             const popupId = `popup_${siteIdDisplay.replace(/[^a-zA-Z0-9]/g, '_')}`;
-            
+
             return `
                 <div id="${popupId}">
                     <div class="popup-header ${headerClass}">
@@ -1325,7 +1348,7 @@
                         </div>
                         <button id="btn_${popupId}" onclick="togglePopupView('${popupId}', '${siteIdDisplay}')" class="header-btn">CONFIG & UPGRADE <i class="fas fa-arrow-right"></i></button>
                     </div>
-                    
+
                     <div id="kpi_${popupId}" class="p-4">
                         <div class="sector-table-container">
                             <table class="sector-table w-full text-xs">
@@ -1366,7 +1389,7 @@
                             </table>
                         </div>
                     </div>
-                    
+
                     <div id="upg_${popupId}" class="p-4 hidden">
                         <div id="upg_content_${popupId}" class="sector-table-container">
                             <div class="text-center text-gray-400 py-4"><i class="fas fa-circle-notch fa-spin"></i> Loading Analysis...</div>
@@ -1377,7 +1400,7 @@
         }
 
         function getAnnulusSector(lat, lng, azimuth, innerRadiusM, outerRadiusM, beamwidth) {
-            const R = 6378137; const startAngle = (azimuth - beamwidth / 2) * (Math.PI / 180); const endAngle = (azimuth + beamwidth / 2) * (Math.PI / 180); const latRad = lat * (Math.PI / 180), lngRad = lng * (Math.PI / 180);
+            const R = 6378137; const startAngle = (azimuth - beamwidth / 2) * (Math.PI / 180); const endAngle = (azimuth + beamwidth / 2) * (Math.PI / 180); const latRad =lat * (Math.PI / 180), lngRad = lng * (Math.PI / 180);
             function getPoint(radMeters, angle) { const d = radMeters / R; const pLat = Math.asin(Math.sin(latRad) * Math.cos(d) + Math.cos(latRad) * Math.sin(d) * Math.cos(angle)); const pLng = lngRad + Math.atan2(Math.sin(angle) * Math.sin(d) * Math.cos(latRad), Math.cos(d) - Math.sin(latRad) * Math.sin(pLat)); return [pLat * (180 / Math.PI), pLng * (180 / Math.PI)]; }
             const points = [];
             for (let i = 0; i <= 10; i++) points.push(getPoint(outerRadiusM, startAngle + (endAngle - startAngle) * (i / 10)));
@@ -1387,12 +1410,12 @@
 
         function drawSiteCoverage(site, forceMapAdd = false) {
             if (!site.coverage) return;
-            const azGroups = {}; 
-            
+            const azGroups = {};
+
             // FIX 1: Use sec.az instead of sec.azimuth to match Python data
-            site.coverage.forEach(sec => { 
-                if(!azGroups[sec.az]) azGroups[sec.az] = {}; 
-                azGroups[sec.az][sec.tech] = sec; 
+            site.coverage.forEach(sec => {
+                if(!azGroups[sec.az]) azGroups[sec.az] = {};
+                azGroups[sec.az][sec.tech] = sec;
             });
 
             Object.entries(azGroups).forEach(([azStr, techs]) => {
@@ -1403,14 +1426,14 @@
                     { tech: '3G', inner: 0.50, outer: 0.75, color: '#f97316', layer: layer3G },
                     { tech: '2G', inner: 0.75, outer: 1.00, color: '#6b7280', layer: layer2G }
                 ];
-                
+
                 // FIX 2: Use t.rad instead of t.radius
                 const maxRad = Math.max(...Object.values(techs).map(t => t.rad || 1000));
-                
+
                 config.forEach(c => {
                     if (techs[c.tech]) {
                         // FIX 3: Use the actual beamwidth (bw) from Python
-                        const bw = techs[c.tech].bw || 65; 
+                        const bw = techs[c.tech].bw || 65;
                         const polyPoints = getAnnulusSector(site.lat, site.lng, az, maxRad * c.inner, maxRad * c.outer, bw);
                         const poly = L.polygon(polyPoints, { color: c.color, weight: 1, fillOpacity: 0.5 });
                         poly.addTo(c.layer);
@@ -1420,10 +1443,10 @@
             });
         }
 
-        function clearCoverage() { 
-            activeCoverageLayers.forEach(l => map.removeLayer(l)); 
-            activeCoverageLayers = []; 
-            if (connectionLines) { connectionLines.forEach(l => map.removeLayer(l)); connectionLines = []; } 
+        function clearCoverage() {
+            activeCoverageLayers.forEach(l => map.removeLayer(l));
+            activeCoverageLayers = [];
+            if (connectionLines) { connectionLines.forEach(l => map.removeLayer(l)); connectionLines = []; }
         }
         map.on('click', (e) => clearCoverage());
         map.on('boxzoomend', function(e) { siteDataCache.forEach(site => { if (e.boxZoomBounds.contains([site.lat, site.lng])) drawSiteCoverage(site, true); }); });
@@ -1436,17 +1459,17 @@
             container.innerHTML = `<div class="flex flex-col items-center justify-center h-full text-gray-500"><i class="fas fa-circle-notch fa-spin text-4xl mb-3 text-pink-500"></i><p class="font-semibold">Generating forecast...</p></div>`;
             try {
                 const resp = await fetch(`/plot?site_id=${encodeURIComponent(currentModalSiteId)}&forecast_horizon=${horizon}`); const json = await resp.json();
-                if (json.plot_image) { container.innerHTML = ''; Bokeh.embed.embed_item(JSON.parse(json.plot_image), "mapPlotContainer"); } 
+                if (json.plot_image) { container.innerHTML = ''; Bokeh.embed.embed_item(JSON.parse(json.plot_image), "mapPlotContainer"); }
                 else container.innerHTML = `<div class="text-red-500 font-bold p-10 text-center">No data found</div>`;
             } catch (err) { container.innerHTML = `<div class="text-red-500 font-bold p-10 text-center">Error loading plots.</div>`; }
         }
 
-        function zoomToSite(id) { id = id.toUpperCase().trim(); if (siteMarkerMap[id]) { markers.zoomToShowLayer(siteMarkerMap[id], () => siteMarkerMap[id].openPopup()); } }
-        
+        function zoomToSite(id) { id = id.toUpperCase().trim(); if (siteMarkerMap[id]) { markers.zoomToShowLayer(siteMarkerMap[id], () => siteMarkerMap[id].openPopup()); }}
+
         function getClusterColor(id) { if (id === -1) return '#000000'; const colors = ['#FF0000', '#00FF00', '#0000FF', '#FFA500', '#800080', '#00FFFF', '#FF00FF', '#FFFF00', '#A52A2A', '#008080']; return colors[id % colors.length]; }
-        
-        function loadCoverageHoles() { 
-            fetch('/api/map/holes').then(r => r.json()).then(data => { 
+
+        function loadCoverageHoles() {
+            fetch('/api/map/holes').then(r => r.json()).then(data => {
                 if (!data.features || data.features.length === 0) {
                     console.log("No coverage holes found in database.");
                     return;
@@ -1457,27 +1480,27 @@
                 layerOoklaHoles.clearLayers();
                 layerNoise.clearLayers();
 
-                data.features.forEach(f => { 
-                    var props = f.properties; 
-                    var latlng = [f.geometry.coordinates[1], f.geometry.coordinates[0]]; 
+                data.features.forEach(f => {
+                    var props = f.properties;
+                    var latlng = [f.geometry.coordinates[1], f.geometry.coordinates[0]];
                     bounds.extend(latlng);
 
-                    var color = getClusterColor(props.cluster); 
-                    var marker; 
+                    var color = getClusterColor(props.cluster);
+                    var marker;
 
                     if (props.cluster === -1) {
-                        marker = L.circleMarker(latlng, { radius: 3, color: '#000', fillColor: '#000', fillOpacity: 0.8, weight: 1 }).addTo(layerNoise); 
-                    } else if (props.data_source === "Ookla") { 
+                        marker = L.circleMarker(latlng, { radius: 3, color: '#000', fillColor: '#000', fillOpacity: 0.8, weight: 1 }).addTo(layerNoise);
+                    } else if (props.data_source === "Ookla") {
                         var ooklaIcon = L.divIcon({ className: 'custom-div-icon', html: `<div class="shape-triangle" style="border-bottom-color:${color};"></div>`, iconSize: [12, 12] });
-                        marker = L.marker(latlng, { icon: ooklaIcon, clusterId: props.cluster, servingCell: props.serving_cell }).addTo(layerOoklaHoles); 
-                    } else { 
+                        marker = L.marker(latlng, { icon: ooklaIcon, clusterId: props.cluster, servingCell: props.serving_cell }).addTo(layerOoklaHoles);
+                    } else {
                         var mrIcon = L.divIcon({ className: 'custom-div-icon', html: `<div class="shape-square" style="background-color:${color};"></div>`, iconSize: [10, 10] });
-                        marker = L.marker(latlng, { icon: mrIcon, clusterId: props.cluster, servingCell: props.serving_cell }).addTo(layerMRHoles); 
-                    } 
-                    
+                        marker = L.marker(latlng, { icon: mrIcon, clusterId: props.cluster, servingCell: props.serving_cell }).addTo(layerMRHoles);
+                    }
+
                     marker.on('click', function() {
                         if (connectionLines) { connectionLines.forEach(l => map.removeLayer(l)); connectionLines = []; }
-                        
+
                         var servCell = props.serving_cell || "Unknown";
                         if (servCell === "Unknown" || !siteDataCache) {
                             marker.bindPopup(`<strong>Source: ${props.data_source}</strong><br>Serving Site: Unknown`).openPopup();
@@ -1512,15 +1535,15 @@
                             marker.bindPopup(`<strong>Source: ${props.data_source}</strong><br>Site ${siteId} not found on map.`).openPopup();
                         }
                     });
-                }); 
+                });
 
                 if (map.hasLayer(layerMRHoles)) { map.removeLayer(layerMRHoles); map.addLayer(layerMRHoles); }
                 if (map.hasLayer(layerOoklaHoles)) { map.removeLayer(layerOoklaHoles); map.addLayer(layerOoklaHoles); }
                 if (bounds.isValid()) { map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 }); }
-                
+
             }).catch(err => {
                 console.error("Error loading coverage holes:", err);
-            }); 
+            });
         }
 
         function setupAutocomplete() {
@@ -1551,14 +1574,14 @@
             const sectors = JSON.parse(unescape(sectorDataStr));
             const panel = document.getElementById('sectorPricingPanel');
             const content = document.getElementById('sectorPricingContent');
-            
+
             let html = '';
             let siteTotal = 0;
 
             Object.keys(sectors).sort().forEach(secId => {
                 const sec = sectors[secId];
                 if (!sec.capex || !sec.is_congested) return;
-                
+
                 const c = sec.capex;
                 siteTotal += c.total_capex;
                 const shortSec = secId.split('_').pop() || '?';
@@ -1569,7 +1592,7 @@
                         <span class="font-bold text-blue-700">Sector ${shortSec}</span>
                         <span class="font-bold text-green-700">RM ${c.total_capex.toLocaleString('en-MY', {minimumFractionDigits: 2})}</span>
                     </div>
-                    
+
                     <div class="text-[10px] text-gray-500 font-bold uppercase mb-1">Equipment (EQ) Needed:</div>
                     ${c.eq_breakdown.map(eq => `
                         <div class="flex justify-between text-xs mb-1">
@@ -1577,7 +1600,7 @@
                             <span class="font-semibold text-gray-600">RM ${eq[1].toLocaleString('en-MY', {minimumFractionDigits: 2})}</span>
                         </div>
                     `).join('')}
-                    
+
                     <div class="text-[10px] text-gray-500 font-bold uppercase mt-3 mb-1">Engineering Service (ES) Applied:</div>
                     <div class="flex justify-between text-xs bg-green-50 p-1.5 rounded border border-green-100">
                         <span class="text-green-800 font-semibold">${c.es_chosen.name} (Highest)</span>
@@ -1608,12 +1631,12 @@
                     return;
                 }
                 let html = '<div class="grid grid-cols-2 gap-6">';
-                
+
                 // Build EQ Inputs
                 html += '<div><h4 class="font-bold text-blue-800 border-b border-blue-200 pb-2 mb-4">Equipment (EQ) Costs</h4><div class="space-y-3">';
                 Object.entries(data.EQ).forEach(([key, valObj]) => {
                     // Extract the price whether it's the new object format or old flat format
-                    let price = typeof valObj === 'object' ? valObj.price : valObj; 
+                    let price = typeof valObj === 'object' ? valObj.price : valObj;
                     html += `
                     <div class="flex items-center justify-between">
                         <label class="text-xs font-semibold text-gray-600 w-1/2">${key}</label>
@@ -1639,7 +1662,7 @@
                     </div>`;
                 });
                 html += '</div></div></div>';
-                
+
                 document.getElementById('adminPricingFormArea').innerHTML = html;
             }).catch(e => {
                 document.getElementById('adminPricingFormArea').innerHTML = '<div class="text-center text-red-500">Error loading pricing.</div>';
@@ -1649,12 +1672,12 @@
         window.saveAdminPricing = function() {
             const inputs = document.querySelectorAll('#adminPricingFormArea input');
             const payload = { EQ: {}, ES: {} };
-            
+
             inputs.forEach(input => {
                 const type = input.getAttribute('data-type');
                 const key = input.getAttribute('data-orig-key');
                 // Send the nested object format expected by the new Python backend
-                payload[type][key] = { price: parseFloat(input.value) || 0 }; 
+                payload[type][key] = { price: parseFloat(input.value) || 0 };
             });
 
             fetch('/api/pricing', {
@@ -1673,7 +1696,7 @@
         function toggleChat() {
             const panel = document.getElementById('chatPanel');
             const icon = document.querySelector('#chatToggleBtn i');
-            
+
             if (panel.classList.contains('hidden')) {
                 panel.classList.remove('hidden');
                 panel.classList.add('flex');
@@ -1691,18 +1714,18 @@
         function appendMessage(text, sender) {
             const msgContainer = document.getElementById('chatMessages');
             const div = document.createElement('div');
-            
+
             // Style based on who is sending the message
             if (sender === 'user') {
                 div.className = 'self-end bg-blue-600 text-white p-3 rounded-tl-xl rounded-br-xl rounded-bl-xl shadow-sm max-w-[85%]';
             } else {
                 div.className = 'self-start bg-white border border-gray-200 text-gray-800 p-3 rounded-tr-xl rounded-br-xl rounded-bl-xl shadow-sm max-w-[85%]';
             }
-            
+
             // Simple Markdown parser to make bold text look nice
             let formattedText = text.replace(/\*\*(.*?)\*\*/g, '<strong class="text-blue-700">$1</strong>');
             formattedText = formattedText.replace(/\n/g, '<br>');
-            
+
             div.innerHTML = formattedText;
             msgContainer.appendChild(div);
             msgContainer.scrollTop = msgContainer.scrollHeight;
@@ -1739,13 +1762,13 @@
                 });
 
                 const data = await response.json();
-                
+
                 // Remove thinking indicator
                 document.getElementById('thinkingIndicator').remove();
 
                 if (response.ok) {
                     appendMessage(data.reply, 'ai');
-                    
+
                     // --- AGENTIC DEEP LINKING MAGIC ---
                     // If the user typed a valid site ID in their message, automatically fly the map to that site!
                     const words = message.toUpperCase().split(' ');
@@ -1753,7 +1776,7 @@
                         const cleanWord = word.replace(/[^A-Z0-9]/g, ''); // Strip punctuation
                         if (siteMarkerMap[cleanWord]) {
                             console.log("Agent triggered map zoom to:", cleanWord);
-                            zoomToSite(cleanWord); 
+                            zoomToSite(cleanWord);
                         }
                     });
                 } else {
@@ -1775,7 +1798,7 @@
         function startDrawing(type) {
             // Close sidebar so user can see the map clearly while drawing
             document.getElementById('annotationPanel').classList.remove('open');
-            
+
             if(type === 'polygon') new L.Draw.Polygon(map, { shapeOptions: { color: '#dc2626' } }).enable();
             if(type === 'circle') new L.Draw.Circle(map, { shapeOptions: { color: '#dc2626' } }).enable();
             if(type === 'marker') new L.Draw.Marker(map).enable();
@@ -1785,7 +1808,7 @@
         map.on(L.Draw.Event.CREATED, function (event) {
             var layer = event.layer;
             drawnItems.addLayer(layer);
-            
+
             var geojson = layer.toGeoJSON();
             var shapeType = event.layerType;
             var radius = shapeType === 'circle' ? layer.getRadius() : null;
@@ -1793,14 +1816,14 @@
 
             // Simple Prompt UI (Replaces complex Modals for speed)
             var title = prompt("Enter Annotation Title:", "New Network Issue");
-            if(!title) { 
+            if(!title) {
                 drawnItems.removeLayer(layer); // Cancel if empty
                 document.getElementById('annotationPanel').classList.add('open');
-                return; 
+                return;
             }
             var desc = prompt("Enter Description/Notes:", "");
             var priority = prompt("Priority (normal / high / critical):", "normal") || "normal";
-            
+
             // POST to your Python Backend
             fetch('/api/annotations', {
                 method: 'POST',
@@ -1831,15 +1854,15 @@
         async function loadAnnotations() {
             const status = document.getElementById('annFilterStatus').value;
             const url = status ? `/api/annotations?status=${status}` : '/api/annotations';
-            
+
             try {
                 const res = await fetch(url);
                 annotationDataCache = await res.json();
-                
+
                 drawnItems.clearLayers();
                 const list = document.getElementById('annotationsList');
                 list.innerHTML = '';
-                
+
                 if(annotationDataCache.length === 0) {
                     list.innerHTML = '<div class="text-center text-gray-400 text-xs mt-10">No annotations found.</div>';
                     return;
@@ -1855,17 +1878,17 @@
                     } else {
                         layer = L.marker([ann.center_lat, ann.center_lng]);
                     }
-                    
+
                     layer.bindPopup(`
                         <div class="font-bold text-blue-800 text-sm border-b pb-1 mb-1">${ann.title}</div>
                         <div class="text-xs text-gray-600">${ann.description || 'No description provided.'}</div>
                         <div class="text-[10px] mt-2 font-bold text-gray-400 uppercase">Status: ${ann.status}</div>
                     `);
                     drawnItems.addLayer(layer);
-                    
+
                     // 2. Render on Sidebar
                     const prioColor = ann.priority === 'critical' ? 'bg-red-100 text-red-700 border-red-200' : (ann.priority === 'high' ? 'bg-orange-100 text-orange-700 border-orange-200' : 'bg-gray-100 text-gray-600 border-gray-200');
-                    
+
                     list.innerHTML += `
                         <div class="bg-white p-3 rounded-lg border border-gray-200 shadow-sm hover:shadow transition cursor-pointer hover:border-blue-300" onclick="map.flyTo([${ann.center_lat}, ${ann.center_lng}], 16)">
                             <div class="flex justify-between items-start mb-1">
@@ -1889,8 +1912,8 @@
         // Connect the "Eye" button to toggle Map visibility
         function toggleAllAnnotations() {
             const btn = document.getElementById('showAnnotationsBtn');
-            btn.classList.toggle('bg-gray-500'); 
-            
+            btn.classList.toggle('bg-gray-500');
+
             if (map.hasLayer(drawnItems)) {
                 map.removeLayer(drawnItems);
                 btn.style.opacity = '0.5';
@@ -1905,22 +1928,22 @@
             const sidebar = document.getElementById('sidebar');
             const toggleBtn = document.getElementById('sidebarToggle');
             const mapEl = document.getElementById('map');
-            
+
             sidebar.classList.toggle('collapsed');
             toggleBtn.classList.toggle('collapsed');
             mapEl.classList.toggle('expanded');
-            
+
             const icon = toggleBtn.querySelector('i');
-            if (sidebar.classList.contains('collapsed')) { 
-                icon.classList.replace('fa-chevron-left', 'fa-chevron-right'); 
-            } else { 
-                icon.classList.replace('fa-chevron-right', 'fa-chevron-left'); 
+            if (sidebar.classList.contains('collapsed')) {
+                icon.classList.replace('fa-chevron-left', 'fa-chevron-right');
+            } else {
+                icon.classList.replace('fa-chevron-right', 'fa-chevron-left');
             }
-            
+
             // Force Leaflet to recalculate map size after transition
             setTimeout(() => { map.invalidateSize(); }, 300);
         }
-        
+
         // Sliding Panel Logic
         function togglePanel(panelId) {
             // Close all other panels first
@@ -1930,7 +1953,7 @@
             // Toggle the selected panel
             document.getElementById(panelId).classList.toggle('open');
         }
-        
+
         function toggleAllAnnotations() {
             const btn = document.getElementById('showAnnotationsBtn');
             btn.classList.toggle('bg-gray-500'); // Visual toggle state
@@ -1999,20 +2022,20 @@
         let currentConversationId = null; let allMessages = []; let allConversations = []; let chatPollInterval = null;
         const EMOJIS = ['😀','😂','😍','🥰','😎','🤔','😅','😭','😤','🙏','👍','👎','❤️','🔥','✅','⚡','🎉','💯','🚀','👏','😊','🤣','😆','😁','😋','🤩','😇','😴','🤗','😏','😒','🙄','😑','🤐','😬','🥲','😓','😥','😢','😨','😰','😱','🤯','🤫','🫡','🫠','💀','👻'];
         async function openMessagingModal() {
-		    try {
-		        // Check session first
-		        const sessionValid = await checkSession();
-		        if (!sessionValid) return;
-		        
-		        document.getElementById('menuDropdown').classList.add('hidden');
-		        document.getElementById('messagingModal').classList.remove('hidden');
-		        buildEmojiPicker();
-		        await loadConversations();
-		        await loadUsersForMessaging();
-		    } catch(e) {
-		        console.error('Error opening messaging modal:', e);
-		        alert('Please refresh the page and try again. Session may have expired.');
-		    }
+                    try {
+                        // Check session first
+                        const sessionValid = await checkSession();
+                        if (!sessionValid) return;
+
+                        document.getElementById('menuDropdown').classList.add('hidden');
+                        document.getElementById('messagingModal').classList.remove('hidden');
+                        buildEmojiPicker();
+                        await loadConversations();
+                        await loadUsersForMessaging();
+                    } catch(e) {
+                        console.error('Error opening messaging modal:', e);
+                        alert('Please refresh the page and try again. Session may have expired.');
+                    }
 }
         function closeMessagingModal() { document.getElementById('messagingModal').classList.add('hidden'); if (chatPollInterval) { clearInterval(chatPollInterval); chatPollInterval = null; } document.getElementById('emojiPicker').classList.add('hidden'); }
         function buildEmojiPicker() {
@@ -2020,7 +2043,7 @@
             EMOJIS.forEach(e => { const btn = document.createElement('button'); btn.textContent = e; btn.className = 'hover:bg-gray-100 rounded p-0.5 cursor-pointer'; btn.onclick = () => insertEmoji(e); picker.appendChild(btn); });
         }
         function toggleEmojiPicker() { document.getElementById('emojiPicker').classList.toggle('hidden'); }
-        function insertEmoji(emoji) { const input = document.getElementById('internalChatInput'); const pos = input.selectionStart; input.value = input.value.slice(0, pos) + emoji + input.value.slice(pos); input.focus(); input.selectionStart = input.selectionEnd = pos + emoji.length; }
+        function insertEmoji(emoji) { const input = document.getElementById('internalChatInput'); const pos = input.selectionStart; input.value = input.value.slice(0, pos)+ emoji + input.value.slice(pos); input.focus(); input.selectionStart = input.selectionEnd = pos + emoji.length; }
         function filterConversations() {
             const q = document.getElementById('msgSearchInput').value.toLowerCase().trim(); const list = document.getElementById('conversationList'); list.innerHTML = '';
             const filtered = q ? allConversations.filter(c => { const name = (c.title || c.partner_name || '').toLowerCase(); const last = (c.last_message || '').toLowerCase(); return name.includes(q) || last.includes(q); }) : allConversations;
@@ -2033,7 +2056,7 @@
                 const displayName = c.title || c.partner_name; const isGroup = !!c.is_group; const div = document.createElement('div');
                 div.className = `p-3 cursor-pointer border-b border-gray-100 hover:bg-gray-50 transition ${c.id === currentConversationId ? 'bg-blue-50' : ''}`;
                 div.onclick = () => openConversation(c.id, displayName, isGroup);
-                div.innerHTML = `<div class="flex items-center justify-between"><p class="font-semibold text-sm text-gray-800 truncate flex items-center gap-1">${isGroup ? '<i class="fas fa-users text-purple-500 text-xs flex-shrink-0"></i>' : ''}${escapeHtml(displayName)}</p>${c.unread_count > 0 ? `<span class="bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 ml-1 flex-shrink-0">${c.unread_count}</span>` : ''}</div><p class="text-xs text-gray-500 truncate mt-0.5">${c.last_message ? escapeHtml(c.last_message) : ''}</p><p class="text-xs text-gray-400 mt-0.5">${c.last_time ? new Date(c.last_time).toLocaleString() : ''}</p>`;
+                div.innerHTML = `<div class="flex items-center justify-between"><p class="font-semibold text-sm text-gray-800 truncate flex items-center gap-1">${isGroup ?'<i class="fas fa-users text-purple-500 text-xs flex-shrink-0"></i>' : ''}${escapeHtml(displayName)}</p>${c.unread_count > 0 ? `<span class="bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 ml-1 flex-shrink-0">${c.unread_count}</span>` : ''}</div><p class="text-xs text-gray-500 truncate mt-0.5">${c.last_message ? escapeHtml(c.last_message) : ''}</p><p class="text-xs text-gray-400 mt-0.5">${c.last_time ? new Date(c.last_time).toLocaleString() : ''}</p>`;
                 list.appendChild(div);
             });
         }
@@ -2133,7 +2156,7 @@
         async function sendNewGroup() {
             const name = document.getElementById('newGroupName').value.trim(); const content = document.getElementById('newGroupMessage').value.trim(); const statusEl = document.getElementById('newGroupStatus'); const memberIds = [...document.querySelectorAll('.group-member-cb:checked')].map(cb => parseInt(cb.value));
             if (!name) { statusEl.textContent = 'Enter a group name.'; statusEl.className = 'mt-2 text-xs text-center font-semibold text-red-600'; statusEl.classList.remove('hidden'); return; }
-            if (memberIds.length === 0) { statusEl.textContent = 'Select at least one member.'; statusEl.className = 'mt-2 text-xs text-center font-semibold text-red-600'; statusEl.classList.remove('hidden'); return; }
+            if (memberIds.length === 0) { statusEl.textContent = 'Select at least one member.'; statusEl.className = 'mt-2 text-xs text-center font-semibold text-red-600';statusEl.classList.remove('hidden'); return; }
             if (!content) { statusEl.textContent = 'Write a first message.'; statusEl.className = 'mt-2 text-xs text-center font-semibold text-red-600'; statusEl.classList.remove('hidden'); return; }
             try {
                 const res = await fetch('/api/messages/group/new', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({title: name, member_ids: memberIds, content}) }); const data = await res.json();
@@ -2164,46 +2187,46 @@
         // ============================================================
         let hiddenAnnotations = new Set();
         let annotationsVisible = true;
-        
+
         function timeAgo(isoString) {
             if (!isoString) return '';
             const now = Date.now();
             const then = new Date(isoString).getTime();
             const diffMs = now - then;
             if (diffMs < 0) return 'just now';
-    
+
             const secs = Math.floor(diffMs / 1000);
             const mins = Math.floor(diffMs / (1000 * 60));
             const hours = Math.floor(diffMs / (1000 * 60 * 60));
             const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    
+
             if (secs < 60) return 'just now';
             if (mins < 60) return `${mins} minute${mins !== 1 ? 's' : ''} ago`;
             if (hours < 24) return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
             return `${days} day${days !== 1 ? 's' : ''} ago`;
         }
-    
+
         function escHtml(str) {
             if (!str) return '';
             return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
         }
-    
+
         // ============================================================
         // NOTES LOGIC
         // ============================================================
         function openNotesPanel() { toggleNotesPanel(true); }
-    
+
         function toggleNotesPanel(forceOpen = false) {
             const panel  = document.getElementById('notesPanel');
             const btn    = document.getElementById('notesBtn');
             const isOpen = panel.classList.contains('open');
-    
+
             if (isOpen && !forceOpen) {
                 panel.classList.remove('open');
                 btn.classList.remove('active');
                 return;
             }
-    
+
             const annPanel = document.getElementById('annotationPanel');
             if (annPanel && annPanel.classList.contains('open')) {
                 annPanel.classList.remove('open');
@@ -2215,34 +2238,34 @@
                 tasksPanel.classList.remove('open');
                 document.getElementById('tasksBtn').style.background = '#d97706';
             }
-    
+
             panel.classList.add('open');
             btn.classList.add('active');
             loadNotes();
         }
-    
+
         async function loadNotes() {
             const listEl = document.getElementById('noteList');
             listEl.innerHTML = '<div class="text-center text-gray-400 py-8 text-sm"><i class="fas fa-circle-notch fa-spin mr-2"></i> Loading notes...</div>';
-    
+
             try {
                 const res = await fetch('/api/annotations');
                 const all = await res.json();
                 const myUsername = window.USER_DATA && window.USER_DATA.username;
-    
+
                 const notes = all.filter(a => (!a.assignees || a.assignees.length === 0) && a.created_by_username === myUsername);
-    
+
                 document.getElementById('noteStatTotal').textContent    = notes.length;
                 document.getElementById('noteStatOpen').textContent     = notes.filter(n => n.status === 'open').length;
                 document.getElementById('noteStatResolved').textContent = notes.filter(n => n.status === 'resolved').length;
-    
+
                 const badge = document.getElementById('notesBadge');
                 if (notes.length > 0) {
                     badge && (badge.textContent = notes.length, badge.classList.remove('hidden'));
                 } else {
                     badge && badge.classList.add('hidden');
                 }
-    
+
                 if (!notes.length) {
                     listEl.innerHTML = `
                     <div class="text-center text-purple-300 py-12 px-4">
@@ -2252,7 +2275,7 @@
                     </div>`;
                     return;
                 }
-    
+
                 const shapeIcons = { point: '📍', polyline: '〰️', polygon: '⬡', rectangle: '⬜', circle: '⭕', buffer: '⭕' };
                 listEl.innerHTML = notes.map(n => {
                     const icon = shapeIcons[n.shape_type] || '📐';
@@ -2276,17 +2299,17 @@
                 listEl.innerHTML = `<div class="text-center text-red-400 py-8 text-sm">Failed to load: ${e.message}</div>`;
             }
         }
-    
+
         // ============================================================
         // TASKS LOGIC
         // ============================================================
         let allTasksData = [];
-    
+
         function toggleTasksPanel() {
             const panel = document.getElementById('tasksPanel');
             const btn   = document.getElementById('tasksBtn');
             const isOpen = panel.classList.contains('open');
-    
+
             const annPanel = document.getElementById('annotationPanel');
             if (annPanel && annPanel.classList.contains('open') && !isOpen) {
                 annPanel.classList.remove('open');
@@ -2299,26 +2322,26 @@
                 notesPanel.classList.remove('open');
                 document.getElementById('notesBtn').classList.remove('active');
             }
-    
+
             panel.classList.toggle('open', !isOpen);
             btn.style.background = !isOpen ? '#b45309' : '#d97706';
-    
+
             if (!isOpen) {
                 loadTasks();
             } else {
                 if (typeof toggleAllAnnotations === 'function' && typeof annotationsVisible !== 'undefined' && !annotationsVisible) toggleAllAnnotations();
             }
         }
-    
+
         async function loadTasks() {
             const listEl = document.getElementById('taskList');
             listEl.innerHTML = '<div class="text-center text-gray-400 py-8 text-sm"><i class="fas fa-circle-notch fa-spin mr-2"></i> Loading tasks...</div>';
-    
+
             try {
                 const res  = await fetch('/api/annotations');
                 if (!res.ok) throw new Error('API error ' + res.status);
                 const all  = await res.json();
-    
+
                 const myUsername = window.USER_DATA.username;
                 allTasksData = all.filter(a => {
                     const assigneeUsernames = (a.assignees || []).map(x => x.username);
@@ -2326,23 +2349,23 @@
                     const assignedByMe = a.created_by_username === myUsername && (a.assignees || []).length > 0;
                     return assignedToMe || assignedByMe;
                 });
-    
+
                 updateTaskStats(allTasksData);
                 updateTaskBadge(allTasksData);
                 renderTasks();
                 if (typeof loadAnnotations === 'function') loadAnnotations();
             } catch (e) {
-                listEl.innerHTML = `<div class="tasks-empty"><i class="fas fa-exclamation-circle text-red-400"></i><p class="text-sm font-semibold text-red-500 mt-2">Could not load tasks</p></div>`;
+                listEl.innerHTML = `<div class="tasks-empty"><i class="fas fa-exclamation-circle text-red-400"></i><p class="text-sm font-semibold text-red-500 mt-2">Couldnot load tasks</p></div>`;
             }
         }
-    
+
         function updateTaskStats(tasks) {
             document.getElementById('taskStatOpen').textContent       = tasks.filter(t => t.status === 'open').length;
             document.getElementById('taskStatInProgress').textContent = tasks.filter(t => t.status === 'in_progress').length;
             document.getElementById('taskStatResolved').textContent   = tasks.filter(t => t.status === 'resolved').length;
             document.getElementById('taskStatCritical').textContent   = tasks.filter(t => t.priority === 'critical').length;
         }
-    
+
         function updateTaskBadge(tasks) {
             const active = tasks.filter(t => t.status === 'open' || t.status === 'in_progress').length;
             const badge  = document.getElementById('tasksBadge');
@@ -2353,53 +2376,53 @@
                 badge.classList.add('hidden');
             }
         }
-    
+
         function renderTasks() {
             const statusF   = document.getElementById('taskStatusFilter').value;
             const priorityF = document.getElementById('taskPriorityFilter').value;
             const listEl    = document.getElementById('taskList');
-    
+
             let filtered = allTasksData;
             if (statusF)   filtered = filtered.filter(t => t.status   === statusF);
             if (priorityF) filtered = filtered.filter(t => t.priority === priorityF);
-    
+
             if (filtered.length === 0) {
                 listEl.innerHTML = `<div class="tasks-empty"><i class="fas fa-clipboard-check"></i><p class="text-sm font-semibold text-gray-500 mt-2">No tasks found.</p></div>`;
                 return;
             }
-    
+
             const PRIO_ORDER = { critical: 0, high: 1, normal: 2, low: 3 };
             filtered.sort((a, b) => {
                 const pd = (PRIO_ORDER[a.priority] ?? 2) - (PRIO_ORDER[b.priority] ?? 2);
                 if (pd !== 0) return pd;
                 return new Date(b.created_at) - new Date(a.created_at);
             });
-    
+
             listEl.innerHTML = filtered.map(t => buildTaskCard(t)).join('');
         }
-    
+
         function buildTaskCard(t) {
             const myUsername = window.USER_DATA.username;
             const assigneeUsernames = (t.assignees || []).map(x => x.username);
             const isAssignedToMe = assigneeUsernames.includes(myUsername);
-    
+
             const statusLabels = { open: 'Open', in_progress: 'In Progress', resolved: 'Resolved', closed: 'Closed' };
             const statusClasses = { open: 'status-open', in_progress: 'status-in_progress', resolved: 'status-resolved', closed: 'status-closed' };
-    
+
             const created = t.created_at ? new Date(t.created_at).toLocaleDateString('en-MY', { day:'2-digit', month:'short', year:'numeric' }) : '—';
             const daysOpen = t.days_open != null ? `${t.days_open}d` : (t.status === 'open' || t.status === 'in_progress') ? `${Math.floor((Date.now() - new Date(t.created_at)) / 86400000)}d open` : '';
             const commentCount = t.comment_count || 0;
             const hasLocation = t.representative_lat && t.representative_lng;
             const desc = t.description ? (t.description.length > 70 ? t.description.slice(0, 70) + '…' : t.description) : '<span class="italic text-gray-400">No description</span>';
-    
+
             const assigneeChips = (t.assignees || []).map(u =>
                 `<span class="inline-flex items-center bg-blue-100 text-blue-700 rounded-full px-1.5 py-0.5 text-[10px] font-semibold">${escHtml(u.full_name || u.username)}</span>`
             ).join(' ');
-    
+
             const directionLabel = isAssignedToMe
                 ? `<span class="task-assigner"><i class="fas fa-user-edit mr-0.5"></i> From: ${escHtml(t.created_by_username)}</span>`
                 : `<span class="task-assigner" style="color:#1d4ed8;"><i class="fas fa-user-check mr-0.5"></i> To: ${assigneeChips}</span>`;
-    
+
             return `
             <div class="task-card priority-${t.priority} status-${t.status}" onclick="openTaskDetail(${t.id})">
                 <div class="task-card-title">
@@ -2417,7 +2440,7 @@
                 </div>
             </div>`;
         }
-    
+
         function flyToTask(lat, lng) {
             map.flyTo([lat, lng], 15, { duration: 1.2 });
             setTimeout(() => {
@@ -2425,57 +2448,57 @@
                 if (!panel.classList.contains('open')) panel.classList.add('open');
             }, 1400);
         }
-    
+
         // ============================================================
         // TASK RESOLUTION WORKFLOW
         // ============================================================
         const TR_SUBMIT  = '🔵 SUBMIT:';
         const TR_APPROVE = '✅ APPROVED:';
         const TR_REJECT  = '❌ REJECTED:';
-    
+
         let taskResAnn    = null;
         let taskResComments = [];
-    
+
         async function openTaskDetail(annId) {
             const myUsername = window.USER_DATA.username;
             const resA = await fetch('/api/annotations');
             const all  = await resA.json();
             taskResAnn = all.find(a => a.id === annId);
             if (!taskResAnn) return;
-    
+
             const resC = await fetch(`/api/annotations/${annId}/comments`);
             taskResComments = await resC.json();
-    
+
             renderTaskResModal(myUsername);
             document.getElementById('taskResModal').classList.remove('hidden');
         }
-    
+
         function closeTaskResModal() {
             document.getElementById('taskResModal').classList.add('hidden');
             taskResAnn = null;
             taskResComments = [];
         }
-    
+
         function renderTaskResModal(myUsername) {
             const ann = taskResAnn;
             const isAssignee = (taskResAnn.assignees || []).some(a => a.username === myUsername);
             const isAssigner = taskResAnn.created_by_username  === myUsername;
-    
+
             const headerColors = { critical: 'background: linear-gradient(135deg,#6d28d9,#7c3aed)', high: 'background: linear-gradient(135deg,#b91c1c,#dc2626)', normal: 'background: linear-gradient(135deg,#1e3a8a,#2563eb)', low: 'background: linear-gradient(135deg,#374151,#6b7280)'};
             document.getElementById('taskResHeader').style.cssText = (headerColors[ann.priority] || headerColors.normal) + '; padding:16px 24px; flex-shrink:0;';
             document.getElementById('taskResTitle').textContent = ann.title;
             const assigneeNames = (ann.assignees || []).map(a => a.full_name || a.username).join(', ') || ann.assigned_to_username || '—';
             document.getElementById('taskResMeta').textContent  = `Assigned by ${ann.created_by_username} → ${assigneeNames} · ${ann.priority} priority`;
-    
+
             const stateInfo = resolveState(ann, taskResComments);
             const bannerColors = { open: 'background:#eff6ff; color:#1d4ed8;', in_progress: 'background:#fffbeb; color:#92400e;', pending_review: 'background:#f5f3ff; color:#6d28d9;', rejected: 'background:#fef2f2; color:#dc2626;', resolved: 'background:#f0fdf4; color:#15803d;', closed: 'background:#f0fdf4; color:#15803d;'};
             const bannerIcons = { open: 'fa-circle-dot', in_progress: 'fa-clock', pending_review: 'fa-hourglass-half', rejected: 'fa-times-circle', resolved: 'fa-check-circle', closed: 'fa-check-double' };
-            const bannerLabels = { open: 'Open — awaiting work', in_progress: 'In Progress — work underway', pending_review: 'Pending Review — awaiting assigner approval', rejected: 'Rejected — assignee must resubmit', resolved: 'Resolved — approved by assigner', closed: 'Closed' };
-            
+            const bannerLabels = { open: 'Open — awaiting work', in_progress: 'In Progress — work underway', pending_review: 'Pending Review — awaiting assigner approval',rejected: 'Rejected — assignee must resubmit', resolved: 'Resolved — approved by assigner', closed: 'Closed' };
+
             const banner = document.getElementById('taskResBanner');
             banner.style.cssText = (bannerColors[stateInfo.state] || '') + ' padding:8px 24px;';
-            banner.innerHTML = `<i class="fas ${bannerIcons[stateInfo.state] || 'fa-info-circle'} mr-2"></i><span class="text-sm font-bold">${bannerLabels[stateInfo.state] || stateInfo.state}</span>`;
-    
+            banner.innerHTML = `<i class="fas ${bannerIcons[stateInfo.state] || 'fa-info-circle'} mr-2"></i><span class="text-sm font-bold">${bannerLabels[stateInfo.state]|| stateInfo.state}</span>`;
+
             const timeline = document.getElementById('taskResTimeline');
             const resolutionComments = taskResComments.filter(c => c.body.startsWith(TR_SUBMIT) || c.body.startsWith(TR_APPROVE) || c.body.startsWith(TR_REJECT));
             if (!resolutionComments.length) {
@@ -2503,13 +2526,13 @@
                 }).join('');
                 timeline.scrollTop = timeline.scrollHeight;
             }
-    
+
             const submitSec  = document.getElementById('taskResSubmitSection');
             const reviewSec  = document.getElementById('taskResReviewSection');
             const closedSec  = document.getElementById('taskResClosedSection');
             submitSec.classList.add('hidden'); reviewSec.classList.add('hidden'); closedSec.classList.add('hidden');
             document.getElementById('taskResReport').value   = ''; document.getElementById('taskResFeedback').value = '';
-    
+
             if (stateInfo.state === 'resolved' || stateInfo.state === 'closed') {
                 closedSec.classList.remove('hidden');
             } else if (stateInfo.state === 'pending_review' && isAssigner) {
@@ -2519,7 +2542,7 @@
                 submitSec.classList.remove('hidden');
             }
         }
-    
+
         function resolveState(ann, comments) {
             if (ann.status === 'resolved' || ann.status === 'closed') return { state: 'resolved' };
             const resCmts = comments.filter(c => c.body.startsWith(TR_SUBMIT) || c.body.startsWith(TR_APPROVE) || c.body.startsWith(TR_REJECT));
@@ -2530,7 +2553,7 @@
             if (last.body.startsWith(TR_SUBMIT))  return { state: 'pending_review' };
             return { state: ann.status || 'open' };
         }
-    
+
         async function submitResolution() {
             const report = document.getElementById('taskResReport').value.trim();
             if (!report) { alert('Please write a report before submitting.'); return; }
@@ -2544,7 +2567,7 @@
                 await refreshTaskRes(annId);
             } catch(e) { alert('Failed to submit: ' + e.message); }
         }
-    
+
         async function reviewResolution(decision) {
             const feedback = document.getElementById('taskResFeedback').value.trim();
             if (decision === 'reject' && !feedback) { alert('Please provide a reason for rejection.'); return; }
@@ -2552,7 +2575,7 @@
             const prefix = decision === 'approve' ? TR_APPROVE : TR_REJECT;
             const newStatus = decision === 'approve' ? 'resolved' : 'open';
             const newColor = decision === 'approve' ? '#16a34a' : '#2563eb';
-    
+
             try {
                 await fetch(`/api/annotations/${annId}/comments`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ body: `${prefix} ${feedback}` }) });
                 await fetch(`/api/annotations/${annId}`, {
@@ -2564,7 +2587,7 @@
                 if (typeof loadAnnotations === 'function') loadAnnotations();
             } catch(e) { alert('Failed to submit review: ' + e.message); }
         }
-    
+
         async function refreshTaskRes(annId) {
             const [resA, resC] = await Promise.all([ fetch('/api/annotations'), fetch(`/api/annotations/${annId}/comments`) ]);
             const all = await resA.json();
@@ -2572,7 +2595,7 @@
             taskResComments = await resC.json();
             renderTaskResModal(window.USER_DATA.username);
         }
-    
+
         // ===== UI RESIZING LOGIC =====
         (function() {
             const MIN_WIDTH = 260, MAX_WIDTH = 700;
@@ -2581,7 +2604,7 @@
                 const handle = document.getElementById(handleId);
                 if (!panel || !handle) return;
                 let dragging = false, startX, startW;
-    
+
                 handle.addEventListener('mousedown', function(e) {
                     e.preventDefault(); dragging = true; startX = e.clientX; startW = panel.offsetWidth;
                     handle.classList.add('dragging'); document.body.style.cursor = 'ew-resize'; document.body.style.userSelect = 'none';
@@ -2602,7 +2625,59 @@
             makePanelResizable('notesPanel',      'notesResizeHandle');
         })();
 
-		
+        // ==========================================
+        // SUPERSET DASHBOARD EMBEDDING
+        // ==========================================
+
+        // 1. REPLACE WITH YOUR EC2 PUBLIC IP OR DOMAIN (Keep port 8088)
+        const SUPERSET_DOMAIN = "http://qdt-ai.com:8088";
+
+        // 2. REPLACE WITH YOUR EMBEDDED DASHBOARD UUID
+        const SUPERSET_DASHBOARD_ID = "e8a5704f-7486-438c-a6ba-03e29a613041";
+
+        async function openSupersetDashboard() {
+            document.getElementById('supersetModal').classList.remove('hidden');
+            const container = document.getElementById('supersetEmbedContainer');
+
+            // Show a loading spinner
+            container.innerHTML = '<div class="flex items-center justify-center h-full text-gray-500"><i class="fas fa-circle-notch fa-spin text-3xl mr-3"></i> Loading Analytics Engine...</div>';
+
+            try {
+                // Fetch the secure Guest Token from your Flask backend
+                const res = await fetch(`/api/superset/guest-token?dashboard_id=${SUPERSET_DASHBOARD_ID}`);
+                const data = await res.json();
+
+                if (!res.ok || !data.token) {
+                    throw new Error(data.error || "Failed to fetch Superset token");
+                }
+
+                // Clear the loading spinner
+                container.innerHTML = '';
+
+                // Inject the Dashboard using the official SDK
+                supersetEmbeddedSdk.embedDashboard({
+                    id: SUPERSET_DASHBOARD_ID,
+                    supersetDomain: SUPERSET_DOMAIN,
+                    mountPoint: container,
+                    fetchGuestToken: () => data.token,
+                    dashboardUiConfig: {
+                        hideTitle: true,
+                        hideChartControls: false,
+                        hideTab: false,
+                    }
+                });
+            } catch (err) {
+                console.error("Dashboard Embed Error:", err);
+                container.innerHTML = `<div class="flex items-center justify-center h-full text-red-500 font-bold"><i class="fas fa-exclamation-triangle mr-2"></i> Error loading dashboard: ${err.message}</div>`;
+            }
+        }
+
+        function closeSupersetDashboard() {
+            document.getElementById('supersetModal').classList.add('hidden');
+            document.getElementById('supersetEmbedContainer').innerHTML = ''; // Clean up iframe memory
+        }
+
+
 
     </script>
 </body>
