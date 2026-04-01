@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>NetAlytics</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
+  <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.2.2/css/buttons.dataTables.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <link rel="icon" href="data:,">
+
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.2.2/js/dataTables.buttons.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.html5.min.js"></script>
+  <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+  <script src="https://cdn.bokeh.org/bokeh/release/bokeh-3.9.0.min.js"></script>
+  <script src="https://cdn.bokeh.org/bokeh/release/bokeh-widgets-3.9.0.min.js"></script>
+  <script src="https://cdn.bokeh.org/bokeh/release/bokeh-tables-3.9.0.min.js"></script>
+  <script src="https://cdn.bokeh.org/bokeh/release/bokeh-api-3.9.0.min.js"></script>
+
+    <style>
+        .table-container { overflow-x: auto; }
+        .dt-buttons { display: none !important; }
+        .hidden { display: none; }
+        .tooltip { position: relative; display: inline-block; }
+        .tooltip .tooltiptext { visibility: hidden; width: 450px; background:#1f2937; color:#fff; text-align:left; border-radius:8px; padding:16px; position:absolute; z-index:1000; bottom:125%; left:50%; margin-left:-225px; opacity:0; transition:opacity .3s; box-shadow:0 4px 6px rgba(0,0,0,.3); }
+        .tooltip:hover .tooltiptext { visibility:visible; opacity:1; }
+        .info-card { background: linear-gradient(135deg,#667eea 0%,#764ba2 100%); color:white; padding:20px; border-radius:12px; margin-bottom:24px; box-shadow:0 4px 6px rgba(0,0,0,.1); }
+        .section-header { background:linear-gradient(135deg,#f093fb 0%,#f5576c 100%); color:white; padding:16px 24px; border-radius:12px; margin-bottom:16px; display:flex;align-items:center; gap:12px; }
+        .status-badge { display:inline-block; padding:4px 12px; border-radius:12px; font-size:12px; font-weight:600; }
+        .status-processing { background:#fef3c7; color:#92400e; }
+        .status-complete { background:#d1fae5; color:#065f46; }
+        .status-error { background:#fee2e2; color:#991b1b; }
+        .actual-cell { color: #065f46; font-weight: 700; }
+        .pred-cell { color: #b45309; font-weight: 700; }
+        .congested-cell { color: #b91c1c; font-weight: 700; }
+        .top4-highlight { background:#ffcccc; border-radius:4px; }
+        .layer-calc-cell { background:#e0f2fe; color:#0369a1; font-weight:800; border:1px solid #bae6fd; }
+
+        .dataTable th, .dataTable td {
+            text-align: center !important;
+            vertical-align: middle !important;
+        }
+        .legend-box { display: inline-block; width: 12px; height: 12px; margin-right: 5px; border-radius: 2px; }
+        .legend-item { display: inline-flex; align-items: center; margin-right: 15px; font-size: 0.85rem; color: #374151; }
+
+        .autocomplete-results {
+            position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #e5e7eb; border-radius: 0 0 8px 8px; max-height: 200px; overflow-y: auto; z-index: 50; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        .autocomplete-item { padding: 8px 12px; cursor: pointer; transition: background-color 0.2s; font-size: 0.9rem; color: #374151; }
+        .autocomplete-item:hover { background-color: #f3f4f6; color: #2563eb; }
+        table.dataTable tbody tr.selected { background-color: #dbeafe !important; }
+        table.dataTable tbody tr.selected td { font-weight: bold; color: #1e3a8a; border-top: 1px solid #93c5fd; border-bottom: 1px solid #93c5fd; }
+    </style>
+</head>
+<body class="bg-gray-50">
+    
+    <script>
+        window.APP_CONFIG = {
+            role: "{{ role }}"
+        };
+        window.USER_DATA = {
+            userId: {{ user_id | tojson | safe }},
+            username: "{{ username }}",
+            fullName: "{{ full_name }}",
+            role: "{{ role }}"
+        };
+    </script>
+
+    <nav class="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-4 shadow-lg sticky top-0 z-50">
+        <div class="container mx-auto flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold flex items-center gap-3">
+                    <i class="fas fa-network-wired"></i> NetAlytics
+                </h1>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                {% if role == 'Admin' %}
+                <a href="/iam" class="bg-white/20 hover:bg-white/30 text-white p-2.5 rounded-lg transition-all duration-300 shadow-lg hover:scale-110" title="User Management (IAM)">
+                    <i class="fas fa-shield-alt text-lg"></i>
+                </a>
+                {% endif %}
+
+                <button onclick="openMessagingModal()" class="relative bg-white/20 hover:bg-white/30 text-white p-2.5 rounded-lg transition-all duration-300 shadow-lg hover:scale-110" title="Messages">
+                    <i class="fas fa-envelope text-lg"></i>
+                    <span id="navUnreadBadge" class="hidden absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 font-bold">0</span>
+                </button>
+
+                <button onclick="openReviewModal()" class="bg-white/20 hover:bg-white/30 text-white p-2.5 rounded-lg transition-all duration-300 shadow-lg hover:scale-110" title="Submit a Review">
+                    <i class="fas fa-star text-lg"></i>
+                </button>
+
+                <a href="/map" target="_blank" class="bg-white/20 hover:bg-white/30 text-white p-2.5 rounded-lg transition-all duration-300 shadow-lg hover:scale-110" title="View Coverage Map">
+                    <i class="fas fa-map-marked-alt text-lg"></i>
+                </a>
+
+                <div class="relative ml-2">
+                    <button id="menuBtn" class="bg-white text-blue-600 px-4 py-2 rounded-lg font-bold hover:bg-gray-100 transition flex items-center gap-2 shadow-lg">
+                        <i class="fas fa-user-circle"></i> {{ username }} <i class="fas fa-chevron-down text-xs ml-1"></i>
+                    </button>
+                    <div id="menuDropdown" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl overflow-hidden text-gray-700 border border-gray-100">
+                        <button onclick="openSettingsModal()" class="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-2 border-b border-gray-50"><i class="fas fa-cog text-gray-400"></i> Settings</button>
+                        <a href="/logout" class="block px-4 py-3 hover:bg-red-50 text-red-600 flex items-center gap-2"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto px-4 py-8">
+        <div class="info-card">
+            <h2 class="text-2xl font-bold mb-3 flex items-center gap-2"><i class="fas fa-info-circle"></i> About This Tool</h2>
+            <p class="text-blue-50 mb-4">
+                This platform performs comprehensive network performance analysis for cellular networks, processing data from multiple vendors. It forecasts congestion, identifies bottlenecks, and provides actionable insights.
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-white bg-opacity-20 rounded-lg p-4">
+                    <h3 class="font-semibold mb-2 flex items-center gap-2"><i class="fas fa-file-upload"></i> Supported Formats</h3>
+                    <ul class="text-sm text-blue-50 space-y-1">
+                        <li>• <strong>xC Format (Celcom):</strong> Daily data with Date column.</li>
+                        <li>• <strong>xD Format (Digi):</strong> Weekly aggregated data.</li>
+                        <li>• CSV, Excel (XLS, XLSX, XLSB)</li>
+                    </ul>
+                </div>
+                <div class="bg-white bg-opacity-20 rounded-lg p-4">
+                    <h3 class="font-semibold mb-2 flex items-center gap-2"><i class="fas fa-chart-line"></i> Key Features</h3>
+                    <ul class="text-sm text-blue-50 space-y-1">
+                        <li>• <strong>Dual Pipeline:</strong> Adaptive logic for xC vs xD.</li>
+                        <li>• <strong>52-week Forecasting:</strong> AI-driven prediction.</li>
+                        <li>• <strong>Congestion Alerts:</strong> Multi-metric thresholds.</li>
+                        <li>• <strong>CD File Export:</strong> Unified granular data download.</li>
+                    </ul>
+                </div>
+                <div class="bg-white bg-opacity-20 rounded-lg p-4">
+                    <h3 class="font-semibold mb-2 flex items-center gap-2"><i class="fas fa-database"></i> Naming Logic</h3>
+                    <ul class="text-sm text-blue-50 space-y-1">
+                        <li>• <strong>Celcom:</strong> Identified by "_" (e.g. <i>..._7_1</i> -> Sector 1)</li>
+                        <li>• <strong>Digi:</strong> Identified by "-" (e.g. <i>...-21</i> -> Sector 1)</li>
+                        <li>• Automatic Operator Detection</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div id="resultsSection" class="hidden">
+            <div class="bg-white rounded-lg shadow-md p-5 mb-6 sticky top-0 z-40 border-b-4 border-blue-600 transition-all">
+                <div class="flex flex-wrap items-end gap-6">
+                    <div class="w-full sm:w-48">
+                        <label class="text-xs font-bold text-gray-500 uppercase mb-1 block">Filter Region</label>
+                        <select id="globalFilterRegion" class="w-full p-2.5 border border-gray-300 rounded-lg font-semibold bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none text-sm text-gray-700">
+                            <option value="All">All Regions</option>
+                        </select>
+                    </div>
+                    <div class="w-full sm:w-48">
+                        <label class="text-xs font-bold text-gray-500 uppercase mb-1 block">Filter Year</label>
+                        <select id="globalFilterYear" class="w-full p-2.5 border border-gray-300 rounded-lg font-semibold bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none text-sm text-gray-700"></select>
+                    </div>
+                    <div class="w-full sm:w-48">
+                        <label class="text-xs font-bold text-gray-500 uppercase mb-1 block">Filter Week</label>
+                        <select id="globalFilterWeek" class="w-full p-2.5 border border-gray-300 rounded-lg font-semibold bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none text-sm text-gray-700">
+                            <option value="All">All Weeks</option>
+                        </select>
+                    </div>
+                    <div class="w-full sm:w-48">
+                        <label class="text-xs font-bold text-gray-500 uppercase mb-1 block">Filter Operator</label>
+                        <select id="globalFilterOperator" class="w-full p-2.5 border border-gray-300 rounded-lg font-semibold bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none text-sm text-gray-700">
+                            <option value="All">All Operators</option>
+                            <option value="Celcom">Celcom</option>
+                            <option value="Digi">Digi</option>
+                        </select>
+                    </div>
+                    <div class="w-full sm:w-48">
+                        <label class="text-xs font-bold text-gray-500 uppercase mb-1 block">Filter Cluster</label>
+                        <input type="text" id="globalFilterCluster" placeholder="e.g. KUL_01" class="w-full p-2.5 border border-gray-300 rounded-lg font-semibold bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none text-sm text-gray-700">
+                    </div>
+                    <div class="flex-1 flex flex-wrap gap-4 justify-end items-end">
+                        <div class="h-[42px]">
+                             <a href="/download/cd_file" class="bg-gradient-to-r from-teal-500 to-teal-700 text-white px-6 py-2.5 rounded-lg hover:shadow-lg transition flex items-center gap-2 font-bold h-full border border-teal-600" title="Download Unified CD File">
+                                <i class="fas fa-file-export"></i> <span>Export Unified CD</span>
+                            </a>
+                        </div>
+                        <div class="bg-blue-50 px-5 py-3 rounded-lg text-center border border-blue-100 min-w-[120px] shadow-sm">
+                            <div class="text-[10px] text-blue-500 font-bold uppercase tracking-wider mb-1">Total Sites</div>
+                            <div id="scoreTotalSectors" class="text-2xl font-bold text-blue-700">-</div>
+                        </div>
+                        <div class="bg-red-50 px-5 py-3 rounded-lg text-center border border-red-100 min-w-[120px] shadow-sm">
+                            <div class="text-[10px] text-red-500 font-bold uppercase tracking-wider mb-1">Congested Sectors</div>
+                            <div id="scoreCongested" class="text-2xl font-bold text-red-700">-</div>
+                        </div>
+                         <div class="bg-green-50 px-5 py-3 rounded-lg text-center border border-green-100 min-w-[120px] shadow-sm">
+                            <div class="text-[10px] text-green-500 font-bold uppercase tracking-wider mb-1">Avg Vol (GB)</div>
+                            <div id="scoreAvgVol" class="text-2xl font-bold text-green-700">-</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+                <div class="section-header">
+                    <i class="fas fa-chart-bar text-2xl"></i>
+                    <div class="flex-1">
+                        <h2 class="text-xl font-bold">Sector Performance Metrics</h2>
+                        <p class="text-sm opacity-90">Weekly aggregated performance indicators across all sectors. <strong>Click row to view trend.</strong></p>
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <a id="btnDownloadSector" href="/download/sector" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition inline-flex items-center gap-2"><i class="fas fa-download"></i> Download CSV </a>
+                </div>
+                <div class="table-container">
+                    <table id="sectorTable" class="display" style="width:100%">
+                        <thead></thead><tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="bg-white p-3 rounded-lg shadow-sm mb-4 flex flex-wrap items-center">
+            <span class="font-bold text-sm text-gray-600 mr-4">Legend:</span>
+            <div class="legend-item"><span class="legend-box" style="background:black;"></span>Actual</div>
+            <div class="legend-item"><span class="legend-box" style="border:2px dashed #2ca02c;"></span>Forecast (Vol)</div>
+            <div class="legend-item"><span class="legend-box" style="border:2px dashed #ff7f0e;"></span>Forecast (PRB)</div>
+            <div class="legend-item"><span class="legend-box" style="border:2px dashed #9467bd;"></span>Forecast (Thpt)</div>
+            <div class="legend-item"><span class="legend-box" style="background:#fee2e2; border:1px solid #dc2626;"></span>Congested/Alert</div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+                <div class="section-header">
+                    <i class="fas fa-crystal-ball text-2xl"></i>
+                    <div class="flex-1">
+                        <h3 class="text-xl font-bold">Future Performance Forecasts</h3>
+                        <p class="text-sm opacity-90">52-week predictions with confidence intervals</p>
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <button id="btnDownloadForecast" onclick="$('#forecastTable').DataTable().button(0).trigger()" class="bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700 transition inline-flex items-center gap-2"><i class="fas fa-download"></i> Download CSV </button>                              </div>
+                <div class="table-container">
+                    <table id="forecastTable" class="display" style="width:100%">
+                        <thead></thead><tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+                <div class="section-header">
+                    <i class="fas fa-exclamation-triangle text-2xl"></i>
+                    <div class="flex-1">
+                        <h2 class="text-xl font-bold">Congested Sectors</h2>
+                        <p class="text-sm opacity-90">Sectors experiencing performance degradation</p>
+                    </div>
+                </div>
+                <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
+                    <p class="text-sm text-red-800">
+                        <strong>Congestion Criteria:</strong><br>
+                        1. Max Users ≥ 120 (Adaptive: BH Max for xC, Max Active for xD)<br>
+                        2. PRB Utilization ≥ 80%<br>
+                        3. DL Throughput < 3 Mbps
+                    </p>
+                </div>
+                <div class="mb-4">
+                    <a id="btnDownloadCongested" href="/download/congested" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition inline-flex items-center gap-2"><i class="fas fa-download"></i> Download CSV </a>
+                </div>
+                <div class="table-container">
+                    <table id="congestionTable" class="display" style="width:100%">
+                        <thead></thead><tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="plotSection" class="bg-white rounded-lg shadow-md p-6 mb-8">
+                <div class="section-header">
+                    <i class="fas fa-chart-area text-2xl"></i>
+                    <div class="flex-1">
+                    <h2 class="text-xl font-bold">Site Plot — KPIs (Interactive)</h2>
+                    </div>
+                </div>
+                <div class="flex flex-wrap gap-4 items-end mb-4">
+                    <div class="relative w-64">
+                        <label class="block text-sm font-bold text-gray-700 mb-1">Search Site ID:</label>
+                        <input type="text" id="plotSiteInput" placeholder="Type to search..."
+                               class="w-full p-2 border border-gray-300 rounded shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                        <div id="plotSiteResults" class="autocomplete-results hidden"></div>
+                    </div>
+                    <label class="flex flex-col">
+                        <span class="text-sm font-bold text-gray-700 mb-1">Horizon (weeks):</span>
+                        <select id="plotHorizonSelect" class="p-2 border border-gray-300 rounded shadow-sm w-24">
+                            <option value="4">4</option><option value="8">8</option><option value="13">13</option><option value="26">26</option><option value="52" selected>52</option>
+                        </select>
+                    </label>
+                    <button id="generatePlotBtn" class="bg-blue-600 text-white px-6 py-2 rounded shadow-md hover:bg-blue-700 transition font-bold h-[42px]">Generate Plot</button>
+                    <div id="plotStatus" class="text-sm text-gray-600 ml-4 self-center font-semibold"></div>
+                </div>
+                <div id="plotContainer" class="min-h-[600px] w-full bg-white border border-gray-200 rounded-xl"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="chatWidget" class="fixed bottom-8 right-8 z-[5000] flex flex-col items-end">
+        <div id="chatPanel" class="hidden w-80 md:w-96 bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden flex-col mb-4 transition-all transform origin-bottom-right" style="height: 500px;">
+            <div class="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-4 flex justify-between items-center shadow-md">
+                <div class="flex items-center gap-3">
+                    <i class="fas fa-robot text-2xl"></i>
+                    <div>
+                        <h3 class="font-bold text-sm tracking-wide">VIBE AI Agent</h3>
+                        <p class="text-[10px] text-blue-100 uppercase tracking-wider">Powered by Llama 3.1</p>
+                    </div>
+                </div>
+                <button onclick="toggleChat()" class="text-white hover:text-gray-200 focus:outline-none transition-transform hover:scale-110"><i class="fas fa-times text-lg"></i></button>
+            </div>
+            <div id="agentChatMessages" class="flex-1 p-4 overflow-y-auto bg-gray-50 flex flex-col gap-3 text-sm scroll-smooth">
+                <div class="self-start bg-white border border-gray-200 text-gray-800 p-3 rounded-tr-xl rounded-br-xl rounded-bl-xl shadow-sm max-w-[85%]">
+                    Hello! I am your local VIBE Network Copilot. Ask me about site congestion, capacities, or upgrade pricing!
+                </div>
+            </div>
+            <div class="p-3 bg-white border-t border-gray-200">
+                <form id="agentChatForm" class="flex gap-2" onsubmit="handleAgentChatSubmit(event)">
+                    <input type="text" id="agentChatInput" placeholder="Ask about site 1712H..." class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" autocomplete="off">
+                    <button type="submit" class="bg-blue-600 text-white w-10 h-10 rounded-lg flex items-center justify-center hover:bg-blue-700 transition shadow"><i class="fas fa-paper-plane"></i></button>
+                </form>
+            </div>
+        </div>
+        <button id="chatToggleBtn" onclick="toggleChat()" class="bg-gradient-to-r from-blue-600 to-purple-600 text-white w-14 h-14 rounded-full shadow-2xl flex items-center justify-center text-2xl hover:scale-110 transition-transform focus:outline-none border-2 border-white ring-4 ring-blue-100"><i class="fas fa-comment-dots"></i></button>
+    </div>
+
+    <div id="settingsModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+            <div class="bg-gradient-to-r from-blue-600 to-purple-600 p-6 text-white flex items-center justify-between">
+                <h2 class="text-xl font-bold flex items-center gap-2"><i class="fas fa-cog"></i> Account Settings</h2>
+                <button onclick="closeSettingsModal()" class="hover:bg-white/20 p-1 rounded-lg transition"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-6 space-y-6">
+                <div>
+                    <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3">Profile Information</h3>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Full Name</label>
+                            <input type="text" id="settingsFullName" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Email</label>
+                            <input type="email" id="settingsEmail" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Username</label>
+                            <input type="text" id="settingsUsername" class="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-sm text-gray-500" readonly>
+                        </div>
+                        <button onclick="saveProfileSettings()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition text-sm"><i class="fas fa-save mr-2"></i>Save Profile</button>
+                        <div id="profileMsg" class="hidden text-sm text-center font-semibold rounded-lg py-2"></div>
+                    </div>
+                </div>
+                <hr class="border-gray-200">
+                <div>
+                    <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3">Change Password</h3>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">New Password</label>
+                            <input type="password" id="settingsNewPassword" placeholder="At least 6 characters" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Confirm Password</label>
+                            <input type="password" id="settingsConfirmPassword" placeholder="Repeat new password" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
+                        </div>
+                        <button onclick="savePasswordSettings()" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-lg transition text-sm"><i class="fas fa-key mr-2"></i>Update Password</button>
+                        <div id="passwordMsg" class="hidden text-sm text-center font-semibold rounded-lg py-2"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="reviewModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
+            <div class="bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-6 py-4 flex justify-between items-center">
+                <div>
+                    <h2 class="text-xl font-bold flex items-center gap-2"><i class="fas fa-star"></i> Submit a Review</h2>
+                    <p class="text-xs text-yellow-100 mt-0.5">Share your feedback about the platform</p>
+                </div>
+                <button onclick="closeReviewModal()" class="text-white hover:text-yellow-200 text-xl"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="flex border-b border-gray-200">
+                <button id="reviewTabWrite" onclick="switchReviewTab('write')" class="flex-1 py-3 text-sm font-semibold text-yellow-600 border-b-2 border-yellow-500 bg-yellow-50"><i class="fas fa-pen mr-1"></i> Write Review</button>
+                <button id="reviewTabRead" onclick="switchReviewTab('read')" class="flex-1 py-3 text-sm font-semibold text-gray-500 hover:text-gray-700 hover:bg-gray-50"><i class="fas fa-list mr-1"></i> All Reviews</button>
+            </div>
+            <div id="reviewPanelWrite" class="p-6 space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 mb-1">Category</label>
+                        <select id="reviewCategory" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400">
+                            <option>General</option><option>Dashboard</option><option>Coverage Map</option><option>Data Quality</option><option>Performance</option><option>Feature Request</option><option>Bug Report</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 mb-1">Rating</label>
+                        <div id="reviewStars" class="flex gap-1 mt-1">
+                            <i class="review-star fas fa-star text-2xl cursor-pointer text-gray-300" data-val="1"></i>
+                            <i class="review-star fas fa-star text-2xl cursor-pointer text-gray-300" data-val="2"></i>
+                            <i class="review-star fas fa-star text-2xl cursor-pointer text-gray-300" data-val="3"></i>
+                            <i class="review-star fas fa-star text-2xl cursor-pointer text-gray-300" data-val="4"></i>
+                            <i class="review-star fas fa-star text-2xl cursor-pointer text-gray-300" data-val="5"></i>
+                        </div>
+                        <input type="hidden" id="reviewRating" value="0">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-600 mb-1">Title <span class="text-gray-400 font-normal">(optional)</span></label>
+                    <input id="reviewTitle" type="text" placeholder="Brief summary..." maxlength="120" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-600 mb-1">Your Feedback <span class="text-red-500">*</span></label>
+                    <textarea id="reviewBody" rows="4" placeholder="Tell us about your experience..." class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 resize-none"></textarea>
+                </div>
+                <div class="flex items-center justify-between">
+                    <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+                        <input type="checkbox" id="reviewAnon" class="w-4 h-4 rounded"> Post anonymously
+                    </label>
+                    <button onclick="submitReview()" id="reviewSubmitBtn" class="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white px-6 py-2 rounded-lg text-sm font-bold transition-all"><i class="fas fa-paper-plane mr-1"></i> Submit</button>
+                </div>
+                <div id="reviewMsg" class="hidden text-sm text-center font-semibold rounded-lg py-2"></div>
+            </div>
+            <div id="reviewPanelRead" class="hidden p-4 max-h-96 overflow-y-auto">
+                <div class="flex gap-2 mb-3">
+                    <select id="reviewFilterCat" onchange="loadReviews()" class="border border-gray-200 rounded-lg px-3 py-1.5 text-xs flex-1">
+                        <option value="">All Categories</option><option>General</option><option>Dashboard</option><option>Coverage Map</option><option>Data Quality</option><option>Performance</option><option>Feature Request</option><option>Bug Report</option>
+                    </select>
+                    <button onclick="loadReviews()" class="bg-yellow-50 text-yellow-700 border border-yellow-200 rounded-lg px-3 py-1.5 text-xs font-bold hover:bg-yellow-100"><i class="fas fa-sync-alt"></i></button>
+                </div>
+                <div id="reviewsList" class="space-y-3">
+                    <div class="text-center text-gray-400 text-sm py-8"><i class="fas fa-circle-notch fa-spin mr-2"></i>Loading...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="messagingModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden" style="height: 640px; display: flex; flex-direction: column;">
+            <div class="bg-gradient-to-r from-blue-600 to-purple-600 p-4 text-white flex items-center justify-between flex-shrink-0">
+                <h2 class="text-xl font-bold flex items-center gap-2"><i class="fas fa-comments"></i> Messages</h2>
+                <button onclick="closeMessagingModal()" class="hover:bg-white/20 p-1 rounded-lg transition"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="flex flex-1 overflow-hidden">
+                <div class="w-64 border-r border-gray-200 flex flex-col flex-shrink-0">
+                    <div class="p-2 border-b border-gray-100">
+                        <div class="relative">
+                            <i class="fas fa-search absolute left-2.5 top-2.5 text-gray-400 text-xs"></i>
+                            <input id="msgSearchInput" type="text" placeholder="Search messages..." oninput="filterConversations()" class="w-full pl-7 pr-3 py-2 border border-gray-200 rounded-lg text-xs focus:ring-2 focus:ring-blue-400 outline-none">
+                        </div>
+                    </div>
+                    <div class="p-2 border-b border-gray-100 flex gap-2">
+                        <button onclick="showNewConversation()" class="flex-1 bg-blue-600 text-white text-xs font-semibold py-1.5 rounded-lg hover:bg-blue-700 transition flex items-center justify-center gap-1"><i class="fas fa-plus"></i> DM</button>
+                        <button onclick="showNewGroup()" class="flex-1 bg-purple-600 text-white text-xs font-semibold py-1.5 rounded-lg hover:bg-purple-700 transition flex items-center justify-center gap-1"><i class="fas fa-users"></i> Group</button>
+                    </div>
+                    <div id="conversationList" class="flex-1 overflow-y-auto"></div>
+                </div>
+                <div class="flex-1 flex flex-col overflow-hidden">
+                    <div id="chatEmpty" class="flex-1 flex items-center justify-center text-gray-400 flex-col gap-3">
+                        <i class="fas fa-comments text-5xl opacity-30"></i><p class="text-sm font-medium">Select a conversation or start a new one</p>
+                    </div>
+                    <div id="newConvForm" class="hidden flex-1 flex flex-col p-4">
+                        <h3 class="font-bold text-gray-700 mb-3 text-sm">New Message</h3>
+                        <div class="mb-3"><select id="newMsgRecipient" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"><option value="">Select recipient...</option></select></div>
+                        <div class="flex-1 mb-3"><textarea id="newMsgContent" class="w-full h-32 px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none focus:ring-2 focus:ring-blue-500" placeholder="Write your message..."></textarea></div>
+                        <div class="flex gap-2">
+                            <button onclick="sendNewMessage()" class="flex-1 bg-blue-600 text-white text-sm font-semibold py-2 rounded-lg hover:bg-blue-700 transition"><i class="fas fa-paper-plane mr-1"></i> Send</button>
+                            <button onclick="cancelNewConv()" class="flex-1 bg-gray-100 text-gray-700 text-sm font-semibold py-2 rounded-lg hover:bg-gray-200 transition">Cancel</button>
+                        </div>
+                        <div id="newMsgStatus" class="mt-2 text-xs text-center font-semibold hidden"></div>
+                    </div>
+                    <div id="newGroupForm" class="hidden flex-1 flex flex-col p-4 overflow-y-auto">
+                        <h3 class="font-bold text-gray-700 mb-3 text-sm flex items-center gap-2"><i class="fas fa-users text-purple-600"></i> New Group Chat</h3>
+                        <div class="mb-3"><input type="text" id="newGroupName" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500" placeholder="e.g. Planning Team"></div>
+                        <div class="mb-3"><div id="groupMemberCheckboxes" class="max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-2 space-y-1 text-sm text-gray-700"></div></div>
+                        <div class="mb-3"><textarea id="newGroupMessage" class="w-full h-20 px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none focus:ring-2 focus:ring-purple-500" placeholder="Write your first message..."></textarea></div>
+                        <div class="flex gap-2">
+                            <button onclick="sendNewGroup()" class="flex-1 bg-purple-600 text-white text-sm font-semibold py-2 rounded-lg hover:bg-purple-700 transition"><i class="fas fa-users mr-1"></i> Create Group</button>
+                            <button onclick="cancelNewConv()" class="flex-1 bg-gray-100 text-gray-700 text-sm font-semibold py-2 rounded-lg hover:bg-gray-200 transition">Cancel</button>
+                        </div>
+                        <div id="newGroupStatus" class="mt-2 text-xs text-center font-semibold hidden"></div>
+                    </div>
+                    <div id="activeChat" class="hidden flex-1 flex flex-col overflow-hidden">
+                        <div class="p-3 border-b border-gray-100 flex-shrink-0 flex items-center justify-between">
+                            <p class="font-bold text-gray-800 text-sm" id="chatPartnerName"></p>
+                            <div id="groupChatActions" class="hidden flex items-center gap-1">
+                                <button onclick="showGroupMembers()" title="View members" class="text-xs text-gray-500 hover:text-purple-600 px-2 py-1 rounded hover:bg-purple-50 transition flex items-center gap-1"><i class="fas fa-users"></i><span class="hidden sm:inline">Members</span></button>
+                                <button id="renameGroupBtn" onclick="showRenameGroup()" title="Rename group" class="hidden text-xs text-blue-500 hover:text-blue-700 px-2 py-1 rounded hover:bg-blue-50 transition flex items-center gap-1"><i class="fas fa-pen"></i><span class="hidden sm:inline ml-1">Rename</span></button>
+                                <button id="leaveGroupBtn" onclick="leaveGroup()" title="Leave group" class="text-xs text-orange-500 hover:text-orange-700 px-2 py-1 rounded hover:bg-orange-50 transition flex items-center gap-1"><i class="fas fa-sign-out-alt"></i><span class="hidden sm:inline ml-1">Leave</span></button>
+                                <button id="deleteGroupBtn" onclick="deleteGroup()" title="Delete group" class="hidden text-xs text-red-500 hover:text-red-700 px-2 py-1 rounded hover:bg-red-50 transition flex items-center gap-1"><i class="fas fa-trash-alt"></i><span class="hidden sm:inline ml-1">Delete</span></button>
+                            </div>
+                        </div>
+                        <div id="groupMembersPanel" class="hidden border-b border-gray-100 bg-purple-50 px-3 py-2 flex-shrink-0">
+                            <p class="text-xs font-semibold text-purple-700 mb-1">Members</p><div id="groupMembersList" class="flex flex-wrap gap-1.5"></div>
+                        </div>
+                        <div id="renameGroupPanel" class="hidden border-b border-gray-100 bg-blue-50 px-3 py-2 flex-shrink-0">
+                            <p class="text-xs font-semibold text-blue-700 mb-1.5">Rename Group</p>
+                            <div class="flex gap-2">
+                                <input type="text" id="renameGroupInput" maxlength="80" class="flex-1 px-2 py-1.5 text-sm border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none" placeholder="New group name...">
+                                <button onclick="submitRenameGroup()" class="text-xs bg-blue-600 hover:bg-blue-700 text-white font-semibold px-3 py-1.5 rounded-lg transition">Save</button>
+                                <button onclick="hideRenameGroup()" class="text-xs text-gray-500 hover:text-gray-700 px-2 py-1.5 rounded-lg hover:bg-gray-100 transition">Cancel</button>
+                            </div><p id="renameGroupStatus" class="text-xs mt-1 hidden"></p>
+                        </div>
+                        <div id="msgInChatSearchBar" class="hidden border-b border-gray-100 px-3 py-2 flex-shrink-0">
+                            <div class="relative">
+                                <i class="fas fa-search absolute left-2.5 top-2 text-gray-400 text-xs"></i>
+                                <input id="msgInChatInput" type="text" placeholder="Search in conversation..." oninput="filterMessagesInChat()" class="w-full pl-7 pr-8 py-1.5 border border-gray-200 rounded-lg text-xs focus:ring-2 focus:ring-blue-400 outline-none">
+                                <button onclick="closeMsgInChatSearch()" class="absolute right-2 top-1.5 text-gray-400 hover:text-gray-600"><i class="fas fa-times text-xs"></i></button>
+                            </div>
+                        </div>
+                        <div id="chatMessagesPanel" class="flex-1 overflow-y-auto p-3 space-y-2"></div>
+                        <div class="p-3 border-t border-gray-100 flex-shrink-0">
+                            <div id="emojiPicker" class="hidden mb-2 p-2 border border-gray-200 rounded-xl bg-white shadow-md"><div class="flex flex-wrap gap-1 max-h-28 overflow-y-auto text-lg leading-none"></div></div>
+                            <div class="flex gap-2 items-center">
+                                <button onclick="toggleEmojiPicker()" title="Emoji" class="text-gray-400 hover:text-yellow-500 transition text-lg flex-shrink-0">😊</button>
+                                <input type="text" id="internalChatInput" placeholder="Type a message..." class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" onkeydown="if(event.key==='Enter')sendChatMessage()">
+                                <button onclick="toggleMsgInChatSearch()" title="Search messages" class="text-gray-400 hover:text-blue-500 transition flex-shrink-0"><i class="fas fa-search text-sm"></i></button>
+                                <button onclick="sendChatMessage()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition flex-shrink-0"><i class="fas fa-paper-plane"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+    // --- DASHBOARD CONTROLLER & DATA LOGIC ---
+    const Dashboard = {
+        state: { region: 'All', operator: 'All', cluster: 'All', year: new Date().getFullYear(), week: 'All' },
+        init: async function() {
+            await this.populateYears();
+            await this.populateFilters();
+            this.bindEvents();
+            this.updateScorecards();
+        },
+        populateYears: async function() {
+            try {
+                const res = await fetch('/api/years');
+                const years = await res.json() || [];
+                const sel = document.getElementById('globalFilterYear');
+                if (!sel) return;
+                sel.innerHTML = '';
+                if (years.length > 0) {
+                    years.forEach(y => { const opt = document.createElement('option'); opt.value = y; opt.textContent = y; sel.appendChild(opt); });
+                    this.state.year = years[0]; sel.value = this.state.year;
+                } else { sel.innerHTML = `<option value="${this.state.year}">${this.state.year}</option>`; }
+            } catch(e) {}
+        },
+        populateFilters: async function() {
+            try {
+                const res = await fetch('/api/filters/regions');
+                const regions = await res.json() || [];
+                const sel = document.getElementById('globalFilterRegion');
+                if (sel) {
+                    sel.innerHTML = '<option value="All">All Regions</option>';
+                    regions.forEach(r => { const opt = document.createElement('option'); opt.value = r; opt.textContent = r; sel.appendChild(opt); });
+                }
+                const resW = await fetch(`/api/weeks?year=${this.state.year}`);
+                const weeks = await resW.json() || [];
+                const selW = document.getElementById('globalFilterWeek');
+                if (selW) {
+                    selW.innerHTML = '<option value="All">All Weeks</option>';
+                    weeks.forEach(w => { const opt = document.createElement('option'); opt.value = w; opt.textContent = `Week ${w}`; selW.appendChild(opt); });
+                }
+            } catch(e) {}
+        },
+        bindEvents: function() {
+            $('#globalFilterYear').on('change', async (e) => { this.state.year = e.target.value; this.state.week = 'All'; await this.populateFilters(); this.refreshAll(); });
+            $('#globalFilterRegion').on('change', (e) => { this.state.region = e.target.value; this.refreshAll(); });
+            $('#globalFilterOperator').on('change', (e) => { this.state.operator = e.target.value; this.refreshAll(); });
+            $('#globalFilterCluster').on('input', (e) => { this.state.cluster = e.target.value || 'All'; this.refreshAll(); });
+            $('#globalFilterWeek').on('change', (e) => { this.state.week = e.target.value; this.refreshAll(); });
+        },
+        refreshAll: function() {
+            if ($.fn.DataTable.isDataTable('#sectorTable')) $('#sectorTable').DataTable().ajax.reload(null, false);
+            if ($.fn.DataTable.isDataTable('#forecastTable')) $('#forecastTable').DataTable().ajax.reload(null, false);
+            if ($.fn.DataTable.isDataTable('#congestionTable')) $('#congestionTable').DataTable().ajax.reload(null, false);
+            const params = new URLSearchParams(this.state).toString();
+            if(document.getElementById('btnDownloadSector')) document.getElementById('btnDownloadSector').href = `/download/sector?${params}`;
+            if(document.getElementById('btnDownloadForecast')) document.getElementById('btnDownloadForecast').href = `/download/forecast?${params}`;
+            if(document.getElementById('btnDownloadCongested')) document.getElementById('btnDownloadCongested').href = `/download/congested?${params}`;
+            this.updateScorecards();
+        },
+        updateScorecards: async function() {
+            try {
+                const params = new URLSearchParams(this.state).toString();
+                const res = await fetch(`/api/dashboard/stats?${params}&_t=${Date.now()}`);
+                const data = await res.json();
+                if (document.getElementById('scoreTotalSectors')) document.getElementById('scoreTotalSectors').innerText = (data.total_sectors || 0).toLocaleString();
+                if (document.getElementById('scoreCongested')) document.getElementById('scoreCongested').innerText = (data.congested_count || 0).toLocaleString();
+                if (document.getElementById('scoreAvgVol')) document.getElementById('scoreAvgVol').innerText = (data.avg_volume || 0).toFixed(1);
+            } catch(e) {}
+        }
+    };
+
+    async function loadResults() {
+        document.getElementById('resultsSection').classList.remove('hidden');
+        await Dashboard.init();
+        if ($.fn.DataTable.isDataTable('#sectorTable')) { Dashboard.refreshAll(); } 
+        else { displaySectorData(); displayForecastData(); displayCongestionData(); autoSelectTopSite(); }
+    }
+
+    window.addEventListener('DOMContentLoaded', function() { loadResults(); });
+
+    async function autoSelectTopSite() {
+        try {
+            const week = Dashboard.state.week === 'All' ? '' : Dashboard.state.week;
+            const res = await fetch(`/api/map/top_congested?week=${week}`);
+            const data = await res.json();
+            if (data && data.length > 0) {
+                const targetSite = data[0].zoom_sector_id.split('_')[0].split('-')[0];
+                document.getElementById('plotSiteInput').value = targetSite;
+                document.getElementById('generatePlotBtn').click();
+            }
+        } catch (e) {}
+    }
+
+    function displaySectorData() {
+        $('#sectorTable').DataTable({
+            serverSide: true, processing: true, scrollX: true, dom: 'frtip',
+            ajax: { url: '/api/sector_data', data: function(d) { return $.extend({}, d, Dashboard.state); }, dataSrc: 'data' },
+            columns: [
+                { title: 'Sector ID', data: d => d.zoom_sector_id_override || d.zoom_sector_id || '-' },
+                { title: 'Operator', data: 'operator', render: d => d === 'Celcom' ? '<span class="px-2 py-1 rounded bg-blue-100 text-blue-800 text-xs font-bold">Celcom</span>' : (d === 'Digi' ? '<span class="px-2 py-1 rounded bg-yellow-100 text-yellow-800 text-xs font-bold">Digi</span>' : '-') },
+                { title: 'Week', data: 'week' }, { title: 'Region', data: 'region' },
+                { title: 'Layers', data: 'f1f2f3', render: d => d ? `<span class="font-mono text-xs font-bold text-gray-600 tracking-wider">${d.toUpperCase()}</span>` : '-' },
+                { title: 'Area Target', data: 'area_target', render: d => { if (!d) return '-'; if (d.toLowerCase().includes('urban')) return `<span class="px-2 py-1 rounded bg-purple-100 text-purple-800 text-xs font-bold border border-purple-200">${d}</span>`; if (d.toLowerCase().includes('outside')) return `<span class="px-2 py-1 rounded bg-teal-100 text-teal-800 text-xs font-bold border border-teal-200">${d}</span>`; return `<span class="text-xs font-semibold">${d}</span>`; } },
+                { title: 'PRB Util (%)', data: 'eric_prb_util_rate', render: d => d != null ? parseFloat(d).toFixed(2) : '-' },
+                { title: 'DL Thpt', data: 'eric_dl_user_ip_thpt', render: d => d != null ? parseFloat(d).toFixed(2) : '-' },
+                { title: 'Vol (GB)', data: 'eric_data_volume_ul_dl', render: d => d != null ? parseFloat(d).toFixed(2) : '-' }
+            ], pageLength: 25
+        });
+        $('#sectorTable tbody').on('click', 'tr', function () {
+            var data = $('#sectorTable').DataTable().row(this).data();
+            if (data) {
+                document.getElementById('plotSiteInput').value = (data.zoom_sector_id_override || data.zoom_sector_id).split('_')[0];
+                document.getElementById('generatePlotBtn').click();
+                document.getElementById('plotSection').scrollIntoView({behavior:'smooth'});
+            }
+        });
+    }
+
+    function displayForecastData() {
+        $('#forecastTable').DataTable({
+            serverSide: true, processing: true, scrollX: true, dom: 'Bfrtip',
+            buttons: [{ extend: 'csvHtml5', className: 'hidden', filename: 'VIBE_Forecast_Export_' + Dashboard.state.year }],
+            ajax: { url: '/api/forecast_data', data: function(d) { return $.extend({}, d, Dashboard.state); }, dataSrc: 'data' },
+            columns: [
+                { title: 'Sector ID', data: d => d.zoom_sector_id || '-' },
+                { title: 'Operator', data: 'operator', render: d => d === 'Celcom' ? '<span class="px-2 py-1 rounded bg-blue-100 text-blue-800 text-xs font-bold">Celcom</span>' : (d === 'Digi' ? '<span class="px-2 py-1 rounded bg-yellow-100 text-yellow-800 text-xs font-bold">Digi</span>' : '-') },
+                { title: 'Year', data: 'year' }, { title: 'Week', data: 'week' }, { title: 'Month', data: 'month' },
+                { title: 'Actual Vol (GB)', data: 'actual_data_volume', render: d => d ? `<span class="actual-cell">${Number(d).toFixed(2)}</span>` : '-' },
+                { title: 'Pred Vol (GB)', data: 'predicted_eric_data_volume_ul_dl', render: d => d ? `<span class="pred-cell">${Number(d).toFixed(2)}</span>` : '-' },
+                { title: 'Actual PRB (%)', data: 'actual_prb_util_rate', render: d => d ? `<span class="actual-cell">${Number(d).toFixed(2)}</span>` : '-' },
+                { title: 'Pred PRB (%)', data: 'predicted_eric_prb_util_rate', render: d => d ? `<span class="pred-cell">${Number(d).toFixed(2)}</span>` : '-' },
+                { title: 'Actual DL Thpt (Mbps)', data: 'actual_dl_user_ip_thpt', render: d => d ? `<span class="actual-cell">${Number(d).toFixed(2)}</span>` : '-' },
+                { title: 'Pred DL Thpt (Mbps)', data: 'predicted_eric_dl_user_ip_thpt', render: d => d ? `<span class="pred-cell">${Number(d).toFixed(2)}</span>` : '-'}
+            ], pageLength: 25
+        });
+    }
+
+    function displayCongestionData() {
+        $('#congestionTable').DataTable({
+            serverSide: true, processing: true, scrollX: true, dom: 'frtip',
+            ajax: { url: '/api/congestion_data', data: function(d) { return $.extend({}, d, Dashboard.state); }, dataSrc: 'data' },
+            columns: [
+                { title: 'Sector ID', data: d => d.zoom_sector_id_override || d.zoom_sector_id || '-' },
+                { title: 'Week', data: 'week' },
+                { title: 'Operator', data: 'operator', render: d => d === 'Celcom' ? '<span class="px-2 py-1 rounded bg-blue-100 text-blue-800 text-xs font-bold">Celcom</span>' : (d === 'Digi' ? '<span class="px-2 py-1 rounded bg-yellow-100 text-yellow-800 text-xs font-bold">Digi</span>' : '-') },
+                { title: 'Category', data: 'area_target', render: d => { if (!d) return '-'; const str = String(d).toLowerCase(); if (str.includes('urban') || str.includes('kmc')) return `<span class="px-2 py-1 rounded bg-purple-100 text-purple-800 text-xs font-bold border border-purple-200">${d}</span>`; if (str.includes('outside')) return `<span class="px-2 py-1 rounded bg-teal-100 text-teal-800 text-xs font-bold border border-teal-200">${d}</span>`; return `<span class="text-xs font-semibold">${d}</span>`; } },
+                { title: 'Mode', data: 'bau_nic', render: d => { if (!d) return '-'; return String(d).toLowerCase().includes('nic') ? `<span class="px-2 py-1 rounded bg-orange-100 text-orange-800 text-xs font-bold border border-orange-200">NIC</span>` : `<span class="px-2 py-1 rounded bg-gray-100 text-gray-800 text-xs font-bold border border-gray-200">BAU</span>`; } },
+                { title: 'Max Users', data: d => d.eric_max_rrc_user || d.max_active_user || 0, render: d => `<span class="${d>=120?'text-red-600 font-bold':''}">${d}</span>` },
+                { title: 'PRB Util (%)', data: 'eric_prb_util_rate', render: (d, t, r) => { if (d == null) return '-'; let thresh = (r.area_target || '').toLowerCase().includes('urban') ? 80.0 : 92.0; return parseFloat(d) >= thresh ? `<span class="text-red-600 font-bold" title="Exceeds ${thresh}% limit">${Number(d).toFixed(2)}</span>` : Number(d).toFixed(2); } },
+                { title: 'DL Thpt (Mbps)', data: 'eric_dl_user_ip_thpt', render: (d, t, r) => { if (d == null) return '-'; let thresh = 3.0; const cat = (r.area_target || '').toLowerCase(); const mode = (r.bau_nic || '').toLowerCase(); if (cat.includes('urban') || cat.includes('kmc')) thresh = mode.includes('nic') ? 7.0 : 5.0; return parseFloat(d) < thresh ? `<span class="text-red-600 font-bold" title="Below ${thresh} Mbps limit">${Number(d).toFixed(2)}</span>` : Number(d).toFixed(2); } },
+                { title: 'Congested Weeks', data: 'congested_weeks' }
+            ], pageLength: 25
+        });
+    }
+
+    function setupAutocomplete(inputId, resultsId, onSelect) {
+        const input = document.getElementById(inputId); const results = document.getElementById(resultsId); let debounceTimer;
+        document.addEventListener('click', e => { if (!input.contains(e.target) && !results.contains(e.target)) results.classList.add('hidden'); });
+        input.addEventListener('input', function() {
+            clearTimeout(debounceTimer); const query = input.value.trim();
+            if (query.length < 1) { results.classList.add('hidden'); return; }
+            debounceTimer = setTimeout(async () => {
+                try {
+                    const response = await fetch(`/api/site_ids?q=${encodeURIComponent(query)}`);
+                    const data = await response.json();
+                    results.innerHTML = '';
+                    if (data.length > 0) {
+                        data.forEach(siteId => {
+                            const div = document.createElement('div'); div.className = 'autocomplete-item'; div.textContent = siteId;
+                            div.addEventListener('click', () => { input.value = siteId; results.classList.add('hidden'); if(onSelect) onSelect(siteId); });
+                            results.appendChild(div);
+                        });
+                        results.classList.remove('hidden');
+                    } else {
+                        const div = document.createElement('div'); div.className = 'autocomplete-item text-gray-400 italic cursor-default'; div.textContent = 'No matches found'; results.appendChild(div); results.classList.remove('hidden');
+                    }
+                } catch (err) {}
+            }, 300);
+        });
+    }
+    setupAutocomplete('plotSiteInput', 'plotSiteResults', null);
+
+    document.getElementById('generatePlotBtn').addEventListener('click', async function(){
+        const site = document.getElementById('plotSiteInput').value; const horizon = document.getElementById('plotHorizonSelect').value || 52;
+        const container = document.getElementById('plotContainer'); const status = document.getElementById('plotStatus');
+        if (!site) { status.textContent = 'Please type a valid Site ID.'; return; }
+        container.innerHTML = `<div class="flex flex-col items-center justify-center h-96 text-gray-500"><i class="fas fa-circle-notch fa-spin text-4xl mb-3 text-blue-600"></i><p class="font-semibold">Generating interactive analysis...</p></div>`;
+        status.textContent = 'Processing...';
+        try {
+            const resp = await fetch(`/plot?site_id=${encodeURIComponent(site)}&forecast_horizon=${horizon}`);
+            const json = await resp.json();
+            if (json.plot_image && typeof json.plot_image === 'string') {
+                status.textContent = ''; container.innerHTML = '';
+                const item = JSON.parse(json.plot_image); item.target_id = "plotContainer"; Bokeh.embed.embed_item(item);
+            } else { container.innerHTML = `<div class="text-red-500 p-8">No data found for site <strong>${site}</strong></div>`; status.textContent = json.error || 'Error'; }
+        } catch (err) { status.textContent = 'Plot failed'; container.innerHTML = '<div class="text-red-500 p-4">Connection error.</div>'; }
+    });
+
+    // --- NEW MODAL & UI SCRIPTS ---
+    document.addEventListener("DOMContentLoaded", function () {
+        const menuBtn = document.getElementById("menuBtn");
+        const dropdown = document.getElementById("menuDropdown");
+        if(menuBtn) {
+            menuBtn.addEventListener("click", function(e){ e.stopPropagation(); dropdown.classList.toggle("hidden"); });
+            document.addEventListener("click", function(e){ if (!menuBtn.contains(e.target) && !dropdown.contains(e.target)) dropdown.classList.add("hidden"); });
+        }
+        pollUnreadCount(); setInterval(pollUnreadCount, 15000);
+    });
+
+    // --- AI CHAT AGENT ---
+    function toggleChat() {
+        const panel = document.getElementById('chatPanel'); const icon = document.querySelector('#chatToggleBtn i');
+        if (panel.classList.contains('hidden')) {
+            panel.classList.remove('hidden'); panel.classList.add('flex');
+            icon.classList.remove('fa-comment-dots'); icon.classList.add('fa-times');
+            document.getElementById('agentChatInput').focus();
+        } else {
+            panel.classList.add('hidden'); panel.classList.remove('flex');
+            icon.classList.remove('fa-times'); icon.classList.add('fa-comment-dots');
+        }
+    }
+    function appendAgentMessage(text, sender) {
+        const msgContainer = document.getElementById('agentChatMessages'); const div = document.createElement('div');
+        div.className = sender === 'user' ? 'self-end bg-blue-600 text-white p-3 rounded-tl-xl rounded-br-xl rounded-bl-xl shadow-sm max-w-[85%]' : 'self-start bg-white border border-gray-200 text-gray-800 p-3 rounded-tr-xl rounded-br-xl rounded-bl-xl shadow-sm max-w-[85%]';
+        let formattedText = text.replace(/\*\*(.*?)\*\*/g, '<strong class="text-blue-700">$1</strong>').replace(/\n/g, '<br>');
+        div.innerHTML = formattedText; msgContainer.appendChild(div); msgContainer.scrollTop = msgContainer.scrollHeight;
+    }
+    async function handleAgentChatSubmit(e) {
+        e.preventDefault(); const input = document.getElementById('agentChatInput'); const message = input.value.trim();
+        if (!message) return;
+        appendAgentMessage(message, 'user'); input.value = '';
+        const msgContainer = document.getElementById('agentChatMessages');
+        const thinkingDiv = document.createElement('div'); thinkingDiv.id = 'agentThinking';
+        thinkingDiv.className = 'self-start bg-gray-100 text-gray-500 p-3 rounded-tr-xl rounded-br-xl rounded-bl-xl shadow-sm text-xs flex items-center gap-2 border border-gray-200';
+        thinkingDiv.innerHTML = '<i class="fas fa-circle-notch fa-spin text-blue-500"></i> Running Agent...';
+        msgContainer.appendChild(thinkingDiv); msgContainer.scrollTop = msgContainer.scrollHeight;
+        try {
+            const currentWeek = document.getElementById('globalFilterWeek') ? document.getElementById('globalFilterWeek').value : 40;
+            const response = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: message, week: parseInt(currentWeek) }) });
+            const data = await response.json();
+            document.getElementById('agentThinking').remove();
+            if (response.ok) appendAgentMessage(data.reply, 'ai');
+            else appendAgentMessage("Error: " + (data.error || "Unknown"), 'ai');
+        } catch (err) { document.getElementById('agentThinking').remove(); appendAgentMessage("Connection failed.", 'ai'); }
+    }
+
+    // --- SETTINGS ---
+    async function openSettingsModal() {
+        document.getElementById('menuDropdown').classList.add('hidden');
+        try {
+            const res = await fetch('/api/user/profile'); const data = await res.json();
+            document.getElementById('settingsFullName').value = data.full_name || '';
+            document.getElementById('settingsEmail').value = data.email || '';
+            document.getElementById('settingsUsername').value = data.username || '';
+        } catch(e) {}
+        document.getElementById('settingsModal').classList.remove('hidden');
+    }
+    function closeSettingsModal() { document.getElementById('settingsModal').classList.add('hidden'); document.getElementById('profileMsg').classList.add('hidden'); document.getElementById('passwordMsg').classList.add('hidden'); }
+    async function saveProfileSettings() {
+        const msgEl = document.getElementById('profileMsg'); msgEl.classList.add('hidden');
+        try {
+            const res = await fetch('/api/user/profile', { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ full_name: document.getElementById('settingsFullName').value, email: document.getElementById('settingsEmail').value }) });
+            const data = await res.json();
+            msgEl.textContent = data.message; msgEl.className = `text-sm text-center font-semibold rounded-lg py-2 ${data.success ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`; msgEl.classList.remove('hidden');
+        } catch(e) { msgEl.textContent = 'Error'; msgEl.className = 'text-sm text-center font-semibold rounded-lg py-2 bg-red-100 text-red-700'; msgEl.classList.remove('hidden'); }
+    }
+    async function savePasswordSettings() {
+        const msgEl = document.getElementById('passwordMsg'); const newPw = document.getElementById('settingsNewPassword').value; const confirmPw = document.getElementById('settingsConfirmPassword').value; msgEl.classList.add('hidden');
+        if (newPw !== confirmPw) { msgEl.textContent = 'Passwords do not match'; msgEl.className = 'text-sm text-center font-semibold rounded-lg py-2 bg-red-100 text-red-700'; msgEl.classList.remove('hidden'); return; }
+        try {
+            const res = await fetch('/api/user/change-password', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({new_password: newPw}) });
+            const data = await res.json();
+            msgEl.textContent = data.message; msgEl.className = `text-sm text-center font-semibold rounded-lg py-2 ${data.success ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`; msgEl.classList.remove('hidden');
+            if (data.success) { document.getElementById('settingsNewPassword').value = ''; document.getElementById('settingsConfirmPassword').value = ''; }
+        } catch(e) { msgEl.textContent = 'Error'; msgEl.className = 'text-sm text-center font-semibold rounded-lg py-2 bg-red-100 text-red-700'; msgEl.classList.remove('hidden'); }
+    }
+
+    // --- REVIEWS ---
+    let _reviewRating = 0;
+    function openReviewModal() { document.getElementById('reviewModal').classList.remove('hidden'); switchReviewTab('write'); }
+    function closeReviewModal() { document.getElementById('reviewModal').classList.add('hidden'); resetReviewForm(); }
+    function switchReviewTab(tab) {
+        const write = document.getElementById('reviewPanelWrite'); const read = document.getElementById('reviewPanelRead');
+        const tabW = document.getElementById('reviewTabWrite'); const tabR = document.getElementById('reviewTabRead');
+        if (tab === 'write') {
+            write.classList.remove('hidden'); read.classList.add('hidden');
+            tabW.className = 'flex-1 py-3 text-sm font-semibold text-yellow-600 border-b-2 border-yellow-500 bg-yellow-50';
+            tabR.className = 'flex-1 py-3 text-sm font-semibold text-gray-500 hover:text-gray-700 hover:bg-gray-50';
+        } else {
+            write.classList.add('hidden'); read.classList.remove('hidden');
+            tabR.className = 'flex-1 py-3 text-sm font-semibold text-yellow-600 border-b-2 border-yellow-500 bg-yellow-50';
+            tabW.className = 'flex-1 py-3 text-sm font-semibold text-gray-500 hover:text-gray-700 hover:bg-gray-50';
+            loadReviews();
+        }
+    }
+    function resetReviewForm() {
+        _reviewRating = 0; document.getElementById('reviewRating').value = 0; document.getElementById('reviewTitle').value = ''; document.getElementById('reviewBody').value = ''; document.getElementById('reviewAnon').checked = false; document.getElementById('reviewCategory').value = 'General'; document.querySelectorAll('.review-star').forEach(s => s.style.color = '#d1d5db'); document.getElementById('reviewMsg').classList.add('hidden');
+    }
+    document.querySelectorAll('.review-star').forEach(star => {
+        star.addEventListener('click', function() { _reviewRating = parseInt(this.dataset.val); document.getElementById('reviewRating').value = _reviewRating; document.querySelectorAll('.review-star').forEach(s => s.style.color = parseInt(s.dataset.val) <= _reviewRating ? '#f59e0b' : '#d1d5db'); });
+        star.addEventListener('mouseover', function() { const val = parseInt(this.dataset.val); document.querySelectorAll('.review-star').forEach(s => s.style.color = parseInt(s.dataset.val) <= val ? '#f59e0b' : '#d1d5db'); });
+        star.addEventListener('mouseout', function() { document.querySelectorAll('.review-star').forEach(s => s.style.color = parseInt(s.dataset.val) <= _reviewRating ? '#f59e0b' : '#d1d5db'); });
+    });
+    async function submitReview() {
+        const rating = parseInt(document.getElementById('reviewRating').value); const body = document.getElementById('reviewBody').value.trim();
+        if (!rating) { showReviewMsg('Please select a star rating.', 'error'); return; }
+        if (!body) { showReviewMsg('Please enter your feedback.', 'error'); return; }
+        const btn = document.getElementById('reviewSubmitBtn'); btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-1"></i> Submitting...';
+        try {
+            const res = await fetch('/api/reviews', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ category: document.getElementById('reviewCategory').value, rating, title: document.getElementById('reviewTitle').value.trim(), body, is_anonymous: document.getElementById('reviewAnon').checked }) });
+            const data = await res.json();
+            if (res.ok && data.success) { showReviewMsg('Thank you for your review! 🎉', 'success'); setTimeout(() => { resetReviewForm(); switchReviewTab('read'); }, 1200); }
+            else { showReviewMsg(data.error || 'Failed to submit.', 'error'); }
+        } catch(e) { showReviewMsg('Network error.', 'error'); } finally { btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane mr-1"></i> Submit'; }
+    }
+    function showReviewMsg(text, type) { const msg = document.getElementById('reviewMsg'); msg.textContent = text; msg.className = `text-sm text-center font-semibold rounded-lg py-2 ${type==='success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`; msg.classList.remove('hidden'); }
+    async function loadReviews() {
+        const list = document.getElementById('reviewsList'); const cat = document.getElementById('reviewFilterCat').value;
+        list.innerHTML = '<div class="text-center text-gray-400 text-sm py-8"><i class="fas fa-circle-notch fa-spin mr-2"></i>Loading...</div>';
+        try {
+            const res = await fetch(`/api/reviews?limit=50${cat ? '&category='+encodeURIComponent(cat) : ''}`); const rows = await res.json();
+            if (!rows.length) { list.innerHTML = '<div class="text-center text-gray-400 text-sm py-8"><i class="fas fa-inbox mr-2"></i>No reviews yet.</div>'; return; }
+            list.innerHTML = rows.map(r => `
+                <div class="bg-gray-50 border border-gray-200 rounded-xl p-3">
+                    <div class="flex justify-between items-start">
+                        <div><span class="text-xs font-bold text-gray-700">${escapeHtml(r.username)}</span><span class="ml-2 text-[10px] bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full font-semibold">${escapeHtml(r.category)}</span></div>
+                        <span class="text-yellow-400 text-sm">${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}</span>
+                    </div>
+                    ${r.title ? `<p class="text-sm font-semibold text-gray-800 mt-1">${escapeHtml(r.title)}</p>` : ''}
+                    <p class="text-xs text-gray-600 mt-1 leading-relaxed">${escapeHtml(r.body)}</p>
+                    <p class="text-[10px] text-gray-400 mt-1">${new Date(r.created_at).toLocaleDateString('en-MY',{year:'numeric',month:'short',day:'numeric'})}</p>
+                </div>`).join('');
+        } catch(e) { list.innerHTML = '<div class="text-center text-red-400 text-sm py-8">Failed to load reviews.</div>'; }
+    }
+
+    // --- MESSAGING ---
+    let currentConversationId = null; let allMessages = []; let allConversations = []; let chatPollInterval = null;
+    const EMOJIS = ['😀','😂','😍','🥰','😎','🤔','😅','😭','😤','🙏','👍','👎','❤️','🔥','✅','⚡','🎉','💯','🚀','👏','😊','🤣','😆','😁','😋','🤩','😇','😴','🤗','😏','😒','🙄','😑','🤐','😬','🥲','😓','😥','😢','😨','😰','😱','🤯','🤫','🫡','🫠','💀','👻'];
+    async function openMessagingModal() {
+        try { document.getElementById('menuDropdown').classList.add('hidden'); } catch(e) {}
+        document.getElementById('messagingModal').classList.remove('hidden'); buildEmojiPicker(); await loadConversations(); await loadUsersForMessaging();
+    }
+    function closeMessagingModal() { document.getElementById('messagingModal').classList.add('hidden'); if (chatPollInterval) { clearInterval(chatPollInterval); chatPollInterval = null; } document.getElementById('emojiPicker').classList.add('hidden'); }
+    function buildEmojiPicker() {
+        const picker = document.querySelector('#emojiPicker > div'); if (picker.childElementCount > 0) return;
+        EMOJIS.forEach(e => { const btn = document.createElement('button'); btn.textContent = e; btn.className = 'hover:bg-gray-100 rounded p-0.5 cursor-pointer'; btn.onclick = () => insertEmoji(e); picker.appendChild(btn); });
+    }
+    function toggleEmojiPicker() { document.getElementById('emojiPicker').classList.toggle('hidden'); }
+    function insertEmoji(emoji) { const input = document.getElementById('internalChatInput'); const pos = input.selectionStart; input.value = input.value.slice(0, pos) + emoji + input.value.slice(pos); input.focus(); input.selectionStart = input.selectionEnd = pos + emoji.length; }
+    function filterConversations() {
+        const q = document.getElementById('msgSearchInput').value.toLowerCase().trim(); const list = document.getElementById('conversationList'); list.innerHTML = '';
+        const filtered = q ? allConversations.filter(c => { const name = (c.title || c.partner_name || '').toLowerCase(); const last = (c.last_message || '').toLowerCase(); return name.includes(q) || last.includes(q); }) : allConversations;
+        if (filtered.length === 0) { list.innerHTML = '<p class="text-xs text-gray-400 text-center p-4">No results</p>'; return; }
+        renderConversationItems(filtered);
+    }
+    function renderConversationItems(convs) {
+        const list = document.getElementById('conversationList'); list.innerHTML = '';
+        convs.forEach(c => {
+            const displayName = c.title || c.partner_name; const isGroup = !!c.is_group; const div = document.createElement('div');
+            div.className = `p-3 cursor-pointer border-b border-gray-100 hover:bg-gray-50 transition ${c.id === currentConversationId ? 'bg-blue-50' : ''}`;
+            div.onclick = () => openConversation(c.id, displayName, isGroup);
+            div.innerHTML = `<div class="flex items-center justify-between"><p class="font-semibold text-sm text-gray-800 truncate flex items-center gap-1">${isGroup ? '<i class="fas fa-users text-purple-500 text-xs flex-shrink-0"></i>' : ''}${escapeHtml(displayName)}</p>${c.unread_count > 0 ? `<span class="bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 ml-1 flex-shrink-0">${c.unread_count}</span>` : ''}</div><p class="text-xs text-gray-500 truncate mt-0.5">${c.last_message ? escapeHtml(c.last_message) : ''}</p><p class="text-xs text-gray-400 mt-0.5">${c.last_time ? new Date(c.last_time).toLocaleString() : ''}</p>`;
+            list.appendChild(div);
+        });
+    }
+    async function loadConversations() {
+        try {
+            const res = await fetch('/api/messages/conversations'); allConversations = await res.json(); renderConversationItems(allConversations);
+            const total = allConversations.reduce((s, c) => s + (c.unread_count || 0), 0);
+            ['navUnreadBadge'].forEach(id => { const el = document.getElementById(id); if (!el) return; if (total > 0) { el.textContent = total; el.classList.remove('hidden'); } else el.classList.add('hidden'); });
+        } catch(e) {}
+    }
+    async function loadUsersForMessaging() {
+        try {
+            const res = await fetch('/api/messages/users'); const users = await res.json(); const sel = document.getElementById('newMsgRecipient');
+            sel.innerHTML = '<option value="">Select recipient...</option>'; users.forEach(u => { sel.innerHTML += `<option value="${u.id}">${escapeHtml(u.full_name)} (@${escapeHtml(u.username)})</option>`; });
+        } catch(e) {}
+    }
+    async function openConversation(convId, partnerName, isGroup) {
+        currentConversationId = convId; document.getElementById('chatEmpty').classList.add('hidden'); document.getElementById('newConvForm').classList.add('hidden'); document.getElementById('newGroupForm').classList.add('hidden'); document.getElementById('groupMembersPanel').classList.add('hidden'); document.getElementById('msgInChatSearchBar').classList.add('hidden'); document.getElementById('renameGroupPanel').classList.add('hidden'); document.getElementById('emojiPicker').classList.add('hidden'); document.getElementById('activeChat').classList.remove('hidden'); document.getElementById('chatPartnerName').textContent = partnerName;
+        const groupActions = document.getElementById('groupChatActions'); const leaveGroupBtn = document.getElementById('leaveGroupBtn'); const deleteGroupBtn = document.getElementById('deleteGroupBtn'); const renameGroupBtn = document.getElementById('renameGroupBtn');
+        let isGroupAdmin = false;
+        if (isGroup) {
+            groupActions.classList.remove('hidden');
+            try {
+                const mRes = await fetch(`/api/messages/group/${convId}/members`); const members = await mRes.json();
+                const me = members.find(m => m.id === window.USER_DATA.userId); isGroupAdmin = !!(me && me.is_admin);
+            } catch(e) { }
+            leaveGroupBtn.classList.remove('hidden');
+            if (isGroupAdmin) { deleteGroupBtn.classList.remove('hidden'); renameGroupBtn.classList.remove('hidden'); }
+            else { deleteGroupBtn.classList.add('hidden'); renameGroupBtn.classList.add('hidden'); }
+        } else { groupActions.classList.add('hidden'); renameGroupBtn.classList.add('hidden'); }
+        await loadMessages(convId); await loadConversations();
+        if (chatPollInterval) clearInterval(chatPollInterval); chatPollInterval = setInterval(() => loadMessages(convId), 5000);
+    }
+    async function showGroupMembers() {
+        const panel = document.getElementById('groupMembersPanel'); if (!panel.classList.contains('hidden')) { panel.classList.add('hidden'); return; }
+        try {
+            const res = await fetch(`/api/messages/group/${currentConversationId}/members`); const members = await res.json();
+            const container = document.getElementById('groupMembersList'); container.innerHTML = '';
+            members.forEach(m => { const chip = document.createElement('span'); chip.className = 'text-xs bg-white border border-purple-200 text-purple-700 rounded-full px-2 py-0.5 flex items-center gap-1'; chip.innerHTML = `<i class="fas fa-user text-purple-400" style="font-size:0.6rem"></i>${escapeHtml(m.full_name || m.username)}`; container.appendChild(chip); });
+            panel.classList.remove('hidden');
+        } catch(e) {}
+    }
+    async function leaveGroup() {
+        if (!confirm('Leave this group?')) return;
+        try {
+            const res = await fetch(`/api/messages/group/${currentConversationId}/leave`, { method: 'POST', headers: {'Content-Type': 'application/json'} }); const data = await res.json();
+            if (data.success) { currentConversationId = null; document.getElementById('activeChat').classList.add('hidden'); document.getElementById('chatEmpty').classList.remove('hidden'); await loadConversations(); } else { alert(data.message); }
+        } catch(e) { alert('Error leaving group'); }
+    }
+    async function deleteGroup() {
+        if (!confirm('Permanently delete this group?')) return;
+        try {
+            const res = await fetch(`/api/messages/group/${currentConversationId}/delete`, { method: 'POST', headers: {'Content-Type': 'application/json'} }); const data = await res.json();
+            if (data.success) { currentConversationId = null; document.getElementById('activeChat').classList.add('hidden'); document.getElementById('chatEmpty').classList.remove('hidden'); await loadConversations(); } else { alert(data.message); }
+        } catch(e) { alert('Error deleting group'); }
+    }
+    function showRenameGroup() {
+        const panel = document.getElementById('renameGroupPanel'); if (!panel.classList.contains('hidden')) { hideRenameGroup(); return; }
+        document.getElementById('renameGroupInput').value = document.getElementById('chatPartnerName').textContent; document.getElementById('renameGroupStatus').classList.add('hidden'); document.getElementById('groupMembersPanel').classList.add('hidden'); panel.classList.remove('hidden'); document.getElementById('renameGroupInput').focus();
+    }
+    function hideRenameGroup() { document.getElementById('renameGroupPanel').classList.add('hidden'); document.getElementById('renameGroupStatus').classList.add('hidden'); }
+    async function submitRenameGroup() {
+        const input = document.getElementById('renameGroupInput'); const status = document.getElementById('renameGroupStatus'); const newName = input.value.trim();
+        if (!newName) { status.textContent = 'Name cannot be empty.'; status.className = 'text-xs mt-1 text-red-500'; status.classList.remove('hidden'); return; }
+        try {
+            const res = await fetch(`/api/messages/group/${currentConversationId}/rename`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({title: newName}) }); const data = await res.json();
+            if (data.success) { document.getElementById('chatPartnerName').textContent = newName; status.textContent = 'Group renamed!'; status.className = 'text-xs mt-1 text-green-600'; status.classList.remove('hidden'); await loadConversations(); setTimeout(hideRenameGroup, 1200); }
+            else { status.textContent = data.message; status.className = 'text-xs mt-1 text-red-500'; status.classList.remove('hidden'); }
+        } catch(e) { status.textContent = 'Error renaming.'; status.className = 'text-xs mt-1 text-red-500'; status.classList.remove('hidden'); }
+    }
+    function toggleMsgInChatSearch() { const bar = document.getElementById('msgInChatSearchBar'); bar.classList.toggle('hidden'); if (!bar.classList.contains('hidden')) { document.getElementById('msgInChatInput').focus(); } else { document.getElementById('msgInChatInput').value = ''; renderMessages(allMessages); } }
+    function closeMsgInChatSearch() { document.getElementById('msgInChatSearchBar').classList.add('hidden'); document.getElementById('msgInChatInput').value = ''; renderMessages(allMessages); }
+    function filterMessagesInChat() { const q = document.getElementById('msgInChatInput').value.toLowerCase().trim(); if (!q) { renderMessages(allMessages); return; } const filtered = allMessages.filter(m => (m.content || '').toLowerCase().includes(q)); renderMessages(filtered, q); }
+    function renderMessages(msgs, highlight) {
+        const container = document.getElementById('chatMessagesPanel'); container.innerHTML = '';
+        msgs.forEach(m => {
+            const isMe = m.is_mine; let content = escapeHtml(m.content);
+            if (highlight) { const re = new RegExp('(' + highlight.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi'); content = content.replace(re, '<mark class="bg-yellow-200 rounded px-0.5">$1</mark>'); }
+            const div = document.createElement('div'); div.className = `flex ${isMe ? 'justify-end' : 'justify-start'}`;
+            div.innerHTML = `<div class="max-w-xs px-3 py-2 rounded-2xl text-sm shadow-sm ${isMe ? 'bg-blue-600 text-white rounded-br-sm' : 'bg-gray-100 text-gray-800 rounded-bl-sm'}">${(!isMe && m.sender_name) ? `<p class="text-xs font-semibold mb-1 text-purple-600">${escapeHtml(m.sender_name)}</p>` : ''}<p>${content}</p><p class="text-xs mt-1 opacity-60">${new Date(m.sent_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</p></div>`;
+            container.appendChild(div);
+        });
+        container.scrollTop = container.scrollHeight;
+    }
+    async function loadMessages(convId) {
+        try { const res = await fetch(`/api/messages/conversation/${convId}`); allMessages = await res.json(); const q = document.getElementById('msgInChatInput') ? document.getElementById('msgInChatInput').value.toLowerCase().trim() : ''; if (q) filterMessagesInChat(); else renderMessages(allMessages); } catch(e) {}
+    }
+    async function sendChatMessage() {
+        const input = document.getElementById('internalChatInput'); const content = input.value.trim(); if (!content || !currentConversationId) return; input.value = ''; document.getElementById('emojiPicker').classList.add('hidden');
+        try { await fetch('/api/messages/send', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({conversation_id: currentConversationId, content}) }); await loadMessages(currentConversationId); await loadConversations(); } catch(e) {}
+    }
+    function showNewConversation() { document.getElementById('chatEmpty').classList.add('hidden'); document.getElementById('activeChat').classList.add('hidden'); document.getElementById('newGroupForm').classList.add('hidden'); document.getElementById('newConvForm').classList.remove('hidden'); document.getElementById('newMsgStatus').classList.add('hidden'); if (chatPollInterval) { clearInterval(chatPollInterval); chatPollInterval = null; } }
+    function showNewGroup() { document.getElementById('chatEmpty').classList.add('hidden'); document.getElementById('activeChat').classList.add('hidden'); document.getElementById('newConvForm').classList.add('hidden'); document.getElementById('newGroupForm').classList.remove('hidden'); document.getElementById('newGroupStatus').classList.add('hidden'); if (chatPollInterval) { clearInterval(chatPollInterval); chatPollInterval = null; } loadUsersForGroup(); }
+    async function loadUsersForGroup() {
+        try { const res = await fetch('/api/messages/users'); const users = await res.json(); const box = document.getElementById('groupMemberCheckboxes'); box.innerHTML = ''; users.forEach(u => { box.innerHTML += `<label class="flex items-center gap-2 p-1 hover:bg-gray-50 rounded cursor-pointer"><input type="checkbox" class="group-member-cb accent-purple-600" value="${u.id}"><span>${escapeHtml(u.full_name)} <span class="text-gray-400">@${escapeHtml(u.username)}</span></span></label>`; }); } catch(e) {}
+    }
+    async function sendNewGroup() {
+        const name = document.getElementById('newGroupName').value.trim(); const content = document.getElementById('newGroupMessage').value.trim(); const statusEl = document.getElementById('newGroupStatus'); const memberIds = [...document.querySelectorAll('.group-member-cb:checked')].map(cb => parseInt(cb.value));
+        if (!name) { statusEl.textContent = 'Enter a group name.'; statusEl.className = 'mt-2 text-xs text-center font-semibold text-red-600'; statusEl.classList.remove('hidden'); return; }
+        if (memberIds.length === 0) { statusEl.textContent = 'Select at least one member.'; statusEl.className = 'mt-2 text-xs text-center font-semibold text-red-600'; statusEl.classList.remove('hidden'); return; }
+        if (!content) { statusEl.textContent = 'Write a first message.'; statusEl.className = 'mt-2 text-xs text-center font-semibold text-red-600'; statusEl.classList.remove('hidden'); return; }
+        try {
+            const res = await fetch('/api/messages/group/new', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({title: name, member_ids: memberIds, content}) }); const data = await res.json();
+            if (data.success) { document.getElementById('newGroupName').value = ''; document.getElementById('newGroupMessage').value = ''; statusEl.classList.add('hidden'); await loadConversations(); openConversation(data.conversation_id, data.title, true); }
+            else { statusEl.textContent = data.message || 'Failed'; statusEl.className = 'mt-2 text-xs text-center font-semibold text-red-600'; statusEl.classList.remove('hidden'); }
+        } catch(e) { statusEl.textContent = 'Error creating group.'; statusEl.className = 'mt-2 text-xs text-center font-semibold text-red-600'; statusEl.classList.remove('hidden'); }
+    }
+    function cancelNewConv() { document.getElementById('newConvForm').classList.add('hidden'); document.getElementById('newGroupForm').classList.add('hidden'); document.getElementById('chatEmpty').classList.remove('hidden'); }
+    async function sendNewMessage() {
+        const recipientId = document.getElementById('newMsgRecipient').value; const content = document.getElementById('newMsgContent').value.trim(); const statusEl = document.getElementById('newMsgStatus');
+        if (!recipientId || !content) { statusEl.textContent = 'Select recipient and write a message.'; statusEl.className = 'mt-2 text-xs text-center font-semibold text-red-600'; statusEl.classList.remove('hidden'); return; }
+        try {
+            const res = await fetch('/api/messages/new', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({recipient_id: parseInt(recipientId), content}) }); const data = await res.json();
+            if (data.success) { document.getElementById('newMsgContent').value = ''; document.getElementById('newMsgRecipient').value = ''; statusEl.classList.add('hidden'); await loadConversations(); openConversation(data.conversation_id, data.partner_name, false); }
+            else { statusEl.textContent = data.message || 'Failed'; statusEl.className = 'mt-2 text-xs text-center font-semibold text-red-600'; statusEl.classList.remove('hidden'); }
+        } catch(e) { statusEl.textContent = 'Error sending message.'; statusEl.className = 'mt-2 text-xs text-center font-semibold text-red-600'; statusEl.classList.remove('hidden'); }
+    }
+    async function pollUnreadCount() {
+        try {
+            const res = await fetch('/api/messages/unread-count'); const data = await res.json();
+            const navBadge = document.getElementById('navUnreadBadge');
+            if (data.count > 0) { navBadge.textContent = data.count; navBadge.classList.remove('hidden'); } else { navBadge.classList.add('hidden'); }
+        } catch(e) {}
+    }
+    function escapeHtml(text) { const div = document.createElement('div'); div.appendChild(document.createTextNode(text)); return div.innerHTML; }
+    </script>
+</body>
+</html>
