@@ -132,23 +132,19 @@
         }
         /* Tool buttons and sidebar toggle are positioned relative to #mapContainer */
         #annotationBtn { top: 10px; left: 370px; background: #1d4ed8; }
-        #notesBtn { top: 10px; left: 422px; background: #6d28d9; }
-        #messagesBtn { top: 10px; left: 474px; background: #8b5cf6; }
-        #pricingBtn { top: 10px; left: 526px; background: #059669; }
-        #tasksBtn { top: 10px; left: 578px; background: #d97706; }
-        #reviewBtn { top: 10px; left: 630px; background: #ea580c; }
-        #dashboardBtn { top: 10px; left: 682px; background: #0ea5e9; }
+        #notesBtn      { top: 10px; left: 422px; background: #6d28d9; }
+        #pricingBtn    { top: 10px; left: 474px; background: #059669; }
+        #tasksBtn      { top: 10px; left: 526px; background: #d97706; }
+        #dashboardBtn  { top: 10px; left: 578px; background: #0ea5e9; }
         #showAnnotationsBtn { top: 62px; left: 370px; background: #1d4ed8; }
 
         /* Adjust positions when sidebar collapses */
         #sidebar.collapsed ~ #sidebarToggle,
-        #sidebar.collapsed ~ #annotationBtn { left: 30px !important; }
-        #sidebar.collapsed ~ #notesBtn { left: 82px !important; }
-        #sidebar.collapsed ~ #messagesBtn { left: 134px !important; }
-        #sidebar.collapsed ~ #pricingBtn { left: 186px !important; }
-        #sidebar.collapsed ~ #tasksBtn { left: 238px !important; }
-        #sidebar.collapsed ~ #reviewBtn { left: 290px !important; }
-        #sidebar.collapsed ~ #dashboardBtn { left: 342px !important; }
+        #sidebar.collapsed ~ #annotationBtn     { left: 30px !important; }
+        #sidebar.collapsed ~ #notesBtn          { left: 82px !important; }
+        #sidebar.collapsed ~ #pricingBtn        { left: 134px !important; }
+        #sidebar.collapsed ~ #tasksBtn          { left: 186px !important; }
+        #sidebar.collapsed ~ #dashboardBtn      { left: 238px !important; }
         #sidebar.collapsed ~ #showAnnotationsBtn { left: 30px !important; }
         #sidebarToggle:hover { background: #1d4ed8; width: 28px; }
         #sidebarToggle.collapsed { left: 0; }
@@ -581,18 +577,12 @@
         <i class="fas fa-sticky-note"></i>
         <span id="notesBadge" class="hidden absolute -top-1 -right-1 bg-purple-500 text-white text-[9px] rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-0.5 font-bold">0</span>
     </button>
-    <button id="messagesBtn" class="tool-icon-btn" onclick="openMessagingModal()" title="Messages">
-        <i class="fas fa-envelope"></i>
-    </button>
     <button id="pricingBtn" class="tool-icon-btn" onclick="openAdminPricing()" title="Pricing Configuration">
         <i class="fas fa-dollar-sign"></i>
     </button>
-    <button id="tasksBtn" class="tool-icon-btn" onclick="toggleTasksPanel()" title="Tasks" style="position:relative;">
+    <button id="tasksBtn" class="tool-icon-btn" onclick="toggleTasksPanel()" title="Tasks">
         <i class="fas fa-tasks"></i>
         <span id="tasksBadge" class="hidden absolute -top-1 -right-1 bg-red-500 text-white text-[9px] rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-0.5 font-bold">0</span>
-    </button>
-    <button id="reviewBtn" class="tool-icon-btn" onclick="openReviewModal()" title="Submit Review">
-        <i class="fas fa-star"></i>
     </button>
     <button id="dashboardBtn" class="tool-icon-btn" onclick="openSupersetDashboard()" title="NetAlytics Dashboard">
         <i class="fas fa-chart-pie"></i>
