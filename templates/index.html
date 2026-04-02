@@ -229,6 +229,7 @@
         .ann-eye-btn:hover { color:#2563eb; background:#dbeafe; }
         .ann-eye-btn.ann-eye-hidden { color:#cbd5e1; }
         .ann-eye-btn.ann-eye-hidden:hover { color:#dc2626; background:#fee2e2; }
+        .ann-list { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
         .ann-header { background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%); color: white; padding: 16px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
         .ann-tab { padding: 6px 14px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; cursor: pointer; transition: all 0.2s; border: 1px solid transparent; }
         .ann-tab.active { background: white; color: #1d4ed8; }
@@ -621,7 +622,7 @@
     <div id="map"></div>
 
     <!-- UI Overlay Controls -->
-    <button id="annotationBtn" class="tool-icon-btn" onclick="togglePanel('annotationPanel')" title="Annotations">
+    <button id="annotationBtn" class="tool-icon-btn" onclick="toggleAnnotationPanel()" title="Annotations">
         <i class="fas fa-draw-polygon"></i>
     </button>
     <button id="showAnnotationsBtn" class="tool-icon-btn" onclick="toggleAllAnnotations()" title="Toggle Shapes">
@@ -1868,6 +1869,8 @@
             setupMapAutocomplete();
             loadCoverageHoles();
             loadAnnotations();
+            loadNotes();
+            loadTasks();
         }
 
         async function loadRegions() {
@@ -3066,6 +3069,7 @@
                 if (pendingLayer) { try { map.removeLayer(pendingLayer); } catch(e) {} pendingLayer = null; }
                 loadAnnotations();
                 loadNotes();
+                loadTasks();
             } catch(e) { alert('Error saving annotation: ' + e.message); }
         }
 
@@ -3235,8 +3239,21 @@
             }
         }
 
-        // --- DETAIL MODAL ---
-        async function openDetailModal(id) {
+        // --- DETAIL MODAL ROUTER ---
+        // Decides whether to open the annotation edit modal or task resolution modal
+        function openDetailModal(id) {
+            // Check if this annotation is a task (has assignees and user is involved)
+            const myUsername = window.USER_DATA && window.USER_DATA.username;
+            // Look in allTasksData first — if it's a task, open the task resolution modal
+            if (allTasksData && allTasksData.find(t => t.id === id)) {
+                openTaskDetail(id);
+            } else {
+                // Otherwise open the standard annotation edit modal
+                openAnnotationDetailModal(id);
+            }
+        }
+
+        async function openAnnotationDetailModal(id) {
             currentAnnId = id;
             const res  = await fetch('/api/annotations');
             const anns = await res.json();
@@ -3336,6 +3353,7 @@
                 if (!res.ok) { const d = await res.json(); throw new Error(d.error); }
                 closeDetailModal();
                 loadAnnotations();
+                loadTasks();
                 const np = document.getElementById('notesPanel');
                 if (np && np.classList.contains('open')) loadNotes();
             } catch(e) { alert('Update failed: ' + e.message); }
@@ -3348,6 +3366,7 @@
                 await fetch(`/api/annotations/${id}`, { method: 'DELETE' });
                 closeDetailModal();
                 loadAnnotations();
+                loadTasks();
                 const np = document.getElementById('notesPanel');
                 if (np && np.classList.contains('open')) loadNotes();
             } catch(e) { alert('Delete failed: ' + e.message); }
@@ -3452,35 +3471,6 @@
         }
 
         // ============================================================
-        // UTILITY HELPERS
-        // ============================================================
-        let hiddenAnnotations = new Set();
-        let annotationsVisible = true;
-
-        function timeAgo(isoString) {
-            if (!isoString) return '';
-            const now = Date.now();
-            const then = new Date(isoString).getTime();
-            const diffMs = now - then;
-            if (diffMs < 0) return 'just now';
-
-            const secs = Math.floor(diffMs / 1000);
-            const mins = Math.floor(diffMs / (1000 * 60));
-            const hours = Math.floor(diffMs / (1000 * 60 * 60));
-            const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-            if (secs < 60) return 'just now';
-            if (mins < 60) return `${mins} minute${mins !== 1 ? 's' : ''} ago`;
-            if (hours < 24) return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
-            return `${days} day${days !== 1 ? 's' : ''} ago`;
-        }
-
-        function escHtml(str) {
-            if (!str) return '';
-            return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-        }
-
-        // ============================================================
         // NOTES LOGIC
         // ============================================================
         function openNotesPanel() { toggleNotesPanel(true); }
@@ -3550,7 +3540,7 @@
                     const icon = shapeIcons[n.shape_type] || '📐';
                     const isHidden = hiddenAnnotations && hiddenAnnotations.has(n.id);
                     return `
-                    <div class="note-card ${isHidden ? 'ann-card-hidden' : ''}" onclick="openDetailModal(${n.id})">
+                    <div class="note-card ${isHidden ? 'ann-card-hidden' : ''}" onclick="openAnnotationDetailModal(${n.id})">
                         <div class="ann-card-title">
                             <span>${icon}</span>
                             <span class="flex-1 truncate text-purple-900">${n.title}</span>
@@ -3710,138 +3700,6 @@
             </div>`;
         }
 
-        async function openDetailModal(id) {
-        currentAnnId = id;
-
-        // Load data
-        const res = await fetch('/api/annotations');
-        const anns = await res.json();
-        const ann = anns.find(a => a.id === id);
-        if (!ann) return;
-
-        document.getElementById('detailTitle').textContent = ann.title;
-        document.getElementById('detailMeta').textContent = `Created by ${ann.created_by_username} · ${timeAgo(ann.created_at)}`;
-        document.getElementById('detailAnnId').value = id;
-        document.getElementById('detailTitleInput').value = ann.title;
-        document.getElementById('detailDescInput').value = ann.description || '';
-        document.getElementById('detailStatus').value = ann.status;
-        document.getElementById('detailPriority').value = ann.priority;
-        document.getElementById('detailFillColor').value = ann.fill_color || '#2563eb';
-
-        await loadUsersForDropdowns();
-        // Pre-select all current assignees + set toggle state
-        const currentAssigneeIds = (ann.assignees || []).map(a => a.id);
-        const hasAssignees = currentAssigneeIds.length > 0;
-        setAssignToggle('detail', hasAssignees);
-        populateUserDropdown('detailAssignTo', currentAssigneeIds);
-
-        // Fly to layer
-        if (annotationLayers[id]) {
-            const layer = annotationLayers[id];
-            if (layer.getBounds) {
-                map.flyToBounds(layer.getBounds(), { padding: [80, 80], maxZoom: 15 });
-            } else if (layer.getLatLng) {
-                map.flyTo(layer.getLatLng(), 14);
-            }
-        }
-
-        // Show delete button only if the current user created this annotation
-        const deleteBtn = document.querySelector('#annDetailModal .ann-modal-footer .btn-danger');
-        if (deleteBtn) {
-            const currentUsername = window.USER_DATA && window.USER_DATA.username;
-            deleteBtn.style.display = (currentUsername && ann.created_by_username === currentUsername) ? '' : 'none';
-        }
-
-        // Load comments
-        loadComments(id);
-        document.getElementById('annDetailModal').classList.add('show');
-    }
-
-    async function loadComments(id) {
-        const thread = document.getElementById('commentThread');
-        thread.innerHTML = '<div class="text-xs text-gray-400"><i class="fas fa-circle-notch fa-spin"></i> Loading...</div>';
-        try {
-            const res = await fetch(`/api/annotations/${id}/comments`);
-            const comments = await res.json();
-            if (!comments.length) {
-                thread.innerHTML = '<div class="text-xs text-gray-400 italic">No comments yet. Be the first to comment.</div>';
-                return;
-            }
-            thread.innerHTML = comments.map(c => `
-                <div class="comment-bubble">
-                    <div class="flex justify-between">
-                        <span class="author">${c.author_username}</span>
-                        <span class="time">${timeAgo(c.created_at)}</span>
-                    </div>
-                    <div class="body">${c.body}</div>
-                </div>
-            `).join('');
-            thread.scrollTop = thread.scrollHeight;
-        } catch(e) {
-            thread.innerHTML = '<div class="text-xs text-red-400">Failed to load comments.</div>';
-        }
-    }
-
-    async function addComment() {
-        const input = document.getElementById('newCommentInput');
-        const body = input.value.trim();
-        if (!body || !currentAnnId) return;
-        try {
-            await fetch(`/api/annotations/${currentAnnId}/comments`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ body })
-            });
-            input.value = '';
-            loadComments(currentAnnId);
-        } catch(e) { alert('Failed to add comment'); }
-    }
-
-    async function updateAnnotation() {
-        const id = document.getElementById('detailAnnId').value;
-        const assignedIds = getSelectedAssigneeIds('detailAssignTo');
-        const payload = {
-            title: document.getElementById('detailTitleInput').value,
-            description: document.getElementById('detailDescInput').value,
-            assigned_to_ids: assignedIds,
-            assigned_to: assignedIds[0] || null,
-            status: document.getElementById('detailStatus').value,
-            priority: document.getElementById('detailPriority').value,
-            color: statusBorderColor(document.getElementById('detailStatus').value),
-            fill_color: document.getElementById('detailFillColor').value,
-        };
-        try {
-            const res = await fetch(`/api/annotations/${id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            if (!res.ok) { const d = await res.json(); throw new Error(d.error); }
-            closeDetailModal();
-            loadAnnotations();
-            // Refresh notes panel if open
-            const np = document.getElementById('notesPanel');
-            if (np && np.classList.contains('open')) loadNotes();
-        } catch(e) { alert('Update failed: ' + e.message); }
-    }
-
-    async function deleteAnnotation() {
-        if (!confirm('Delete this annotation? This cannot be undone.')) return;
-        const id = document.getElementById('detailAnnId').value;
-        try {
-            await fetch(`/api/annotations/${id}`, { method: 'DELETE' });
-            closeDetailModal();
-            loadAnnotations();
-            const np = document.getElementById('notesPanel');
-            if (np && np.classList.contains('open')) loadNotes();
-        } catch(e) { alert('Delete failed: ' + e.message); }
-    }
-
-    function closeDetailModal() {
-        document.getElementById('annDetailModal').classList.remove('show');
-        currentAnnId = null;
-    }
-
         function flyToTask(lat, lng) {
             map.flyTo([lat, lng], 15, { duration: 1.2 });
             setTimeout(() => {
@@ -3860,8 +3718,8 @@
         let taskResAnn    = null;
         let taskResComments = [];
 
-        // Alias used by Notes panel cards
-        function openDetailModal(annId) { openTaskDetail(annId); }
+        // Alias used by Notes panel cards — opens the annotation detail/edit modal
+        function openNoteDetail(annId) { openAnnotationDetailModal(annId); }
 
         async function openTaskDetail(annId) {
             const myUsername = window.USER_DATA.username;
@@ -3989,6 +3847,7 @@
                 await refreshTaskRes(annId);
                 if (typeof loadTasks === 'function') loadTasks();
                 if (typeof loadAnnotations === 'function') loadAnnotations();
+                if (typeof loadNotes === 'function') loadNotes();
             } catch(e) { alert('Failed to submit review: ' + e.message); }
         }
 
