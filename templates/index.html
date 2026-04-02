@@ -224,6 +224,60 @@
         .draw-tool-btn.active { background: #dbeafe; border-color: #2563eb; color: #1d4ed8; }
 
         .ann-card-hidden { opacity: 0.45; background: #f1f5f9 !important; }
+        .ann-card-hidden:hover { background: #e2e8f0 !important; }
+        .ann-eye-btn { flex-shrink:0; background:none; border:none; cursor:pointer; color:#94a3b8; font-size:0.72rem; padding:2px 4px; border-radius:4px; transition:color 0.15s, background 0.15s; line-height:1; }
+        .ann-eye-btn:hover { color:#2563eb; background:#dbeafe; }
+        .ann-eye-btn.ann-eye-hidden { color:#cbd5e1; }
+        .ann-eye-btn.ann-eye-hidden:hover { color:#dc2626; background:#fee2e2; }
+        .ann-header { background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%); color: white; padding: 16px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+        .ann-tab { padding: 6px 14px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; cursor: pointer; transition: all 0.2s; border: 1px solid transparent; }
+        .ann-tab.active { background: white; color: #1d4ed8; }
+        .ann-tab:not(.active) { color: rgba(255,255,255,0.75); border-color: rgba(255,255,255,0.3); }
+        .ann-tab:not(.active):hover { background: rgba(255,255,255,0.15); color: white; }
+        .ann-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; cursor: pointer; transition: all 0.2s; border-left: 4px solid #2563eb; }
+        .ann-card:hover { background: #eff6ff; box-shadow: 0 2px 8px rgba(37,99,235,0.1); }
+        .ann-card.priority-high { border-left-color: #dc2626; }
+        .ann-card.priority-critical { border-left-color: #7c3aed; }
+        .ann-card.priority-low { border-left-color: #6b7280; }
+        .ann-card-title { font-size: 0.82rem; font-weight: 700; color: #1e293b; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+        .ann-card-meta { font-size: 0.68rem; color: #64748b; display: flex; gap: 8px; flex-wrap: wrap; }
+        .status-badge { padding: 2px 7px; border-radius: 12px; font-size: 0.6rem; font-weight: 800; text-transform: uppercase; }
+        .status-open { background: #dbeafe; color: #1d4ed8; }
+        .status-in_progress { background: #fef3c7; color: #92400e; }
+        .status-resolved { background: #d1fae5; color: #065f46; }
+        .status-closed { background: #f1f5f9; color: #475569; }
+        #annDetailModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 5000; align-items: center; justify-content: center; }
+        #annDetailModal.show { display: flex; }
+        .ann-modal-box { background: white; width: 540px; border-radius: 14px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 25px 50px rgba(0,0,0,0.3); }
+        .ann-modal-header { background: linear-gradient(135deg, #1e3a8a, #1d4ed8); color: white; padding: 16px 20px; flex-shrink: 0; }
+        .ann-modal-body { padding: 20px; overflow-y: auto; flex: 1; max-height: 65vh; }
+        .ann-modal-footer { padding: 14px 20px; border-top: 1px solid #e5e7eb; background: #f8fafc; flex-shrink: 0; display: flex; gap: 8px; justify-content: flex-end; }
+        .ann-form-input { width: 100%; border: 1px solid #d1d5db; border-radius: 6px; padding: 7px 10px; font-size: 0.82rem; outline: none; transition: border-color 0.2s; box-sizing: border-box; }
+        .ann-form-input:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+        .ann-form-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: #4b5563; margin-bottom: 4px; display: block; }
+        .btn-primary { background: #2563eb; color: white; border: none; border-radius: 7px; padding: 8px 18px; font-weight: 700; font-size: 0.82rem; cursor: pointer; transition: background 0.2s; }
+        .btn-primary:hover { background: #1d4ed8; }
+        .btn-danger { background: #dc2626; color: white; border: none; border-radius: 7px; padding: 8px 18px; font-weight: 700; font-size: 0.82rem; cursor: pointer; }
+        .btn-ghost { background: transparent; border: 1px solid #d1d5db; border-radius: 7px; padding: 8px 18px; font-weight: 600; font-size: 0.82rem; cursor: pointer; color: #374151; }
+        .btn-ghost:hover { background: #f3f4f6; }
+        #annCreateModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 6000; align-items: center; justify-content: center; }
+        #annCreateModal.show { display: flex; }
+        .resizable-modal { position: relative; min-width: 380px; min-height: 300px; max-width: 96vw; max-height: 92vh; box-sizing: border-box; }
+        .modal-resize-e { position: absolute; top: 12px; right: -4px; bottom: 12px; width: 8px; cursor: ew-resize; z-index: 20; display: flex; align-items: center; justify-content: center; }
+        .modal-resize-e::after { content: ''; width: 3px; height: 36px; border-radius: 2px; background: #d1d5db; transition: background 0.15s, height 0.15s; }
+        .modal-resize-e:hover::after, .modal-resize-e.dragging::after { background: #2563eb; height: 52px; }
+        .modal-resize-s { position: absolute; bottom: -4px; left: 12px; right: 12px; height: 8px; cursor: ns-resize; z-index: 20; display: flex; align-items: center; justify-content: center; }
+        .modal-resize-s::after { content: ''; height: 3px; width: 36px; border-radius: 2px; background: #d1d5db; transition: background 0.15s, width 0.15s; }
+        .modal-resize-s:hover::after, .modal-resize-s.dragging::after { background: #2563eb; width: 52px; }
+        .modal-resize-se { position: absolute; bottom: -4px; right: -4px; width: 16px; height: 16px; cursor: nwse-resize; z-index: 21; }
+        .modal-resize-se::after { content: ''; position: absolute; bottom: 4px; right: 4px; width: 8px; height: 8px; border-right: 2px solid #d1d5db; border-bottom: 2px solid #d1d5db; border-radius: 0 0 2px 0; transition: border-color 0.15s; }
+        .modal-resize-se:hover::after, .modal-resize-se.dragging::after { border-color: #2563eb; }
+        .modal-resize-w { position: absolute; top: 12px; left: -4px; bottom: 12px; width: 8px; cursor: ew-resize; z-index: 20; display: flex; align-items: center; justify-content: center; }
+        .modal-resize-w::after { content: ''; width: 3px; height: 36px; border-radius: 2px; background: #d1d5db; transition: background 0.15s, height 0.15s; }
+        .modal-resize-w:hover::after, .modal-resize-w.dragging::after { background: #2563eb; height: 52px; }
+        #annotationBtn.active { background: #dc2626; }
+        #notesBtn.active { background: #dc2626; }
+        #showAnnotationsBtn.annotations-hidden { background: #6b7280; }
     </style>
 </head>
 <body class="bg-gray-50">
@@ -590,11 +644,15 @@
 
     <div id="annotationPanel" class="sliding-panel">
         <div class="panel-resize-handle" id="annotationResizeHandle" title="Drag to resize"></div>
-        <div class="bg-blue-800 p-4 flex justify-between text-white font-bold shadow-md z-10">
-            <span><i class="fas fa-layer-group"></i> Map Annotations</span>
-            <button onclick="togglePanel('annotationPanel')"><i class="fas fa-times hover:text-blue-200 transition"></i></button>
+        <div class="ann-header">
+            <div>
+                <h2 class="text-base font-bold flex items-center gap-2"><i class="fas fa-layer-group"></i> Map Annotations</h2>
+                <p class="text-xs text-blue-200 mt-0.5">Draw, comment &amp; assign on the map</p>
+            </div>
+            <button onclick="toggleAnnotationPanel()" class="text-white hover:text-blue-200 text-xl"><i class="fas fa-times"></i></button>
         </div>
 
+        <!-- Drawing Toolbar -->
         <div id="drawToolbar" class="px-3 py-2 bg-gray-50 border-b border-gray-200">
             <p class="text-[10px] font-bold uppercase text-gray-400 mb-2">Drawing Tools</p>
             <div class="flex flex-wrap gap-2">
@@ -608,18 +666,28 @@
             <div id="drawHint" class="mt-2 text-[10px] text-blue-600 font-semibold hidden"><i class="fas fa-info-circle mr-1"></i><span id="drawHintText"></span></div>
         </div>
 
-        <div class="p-2 bg-gray-100 border-b border-gray-200">
-            <select id="annFilterStatus" onchange="loadAnnotations()" class="w-full p-2 text-xs font-semibold border border-gray-300 rounded shadow-sm focus:ring-blue-500 outline-none text-gray-600">
+        <!-- Tab bar -->
+        <div class="px-3 py-2 bg-white border-b border-gray-100 flex gap-2">
+            <button id="tab-annotations" onclick="setAnnTab('annotations')" class="ann-tab active flex items-center gap-1.5">
+                <i class="fas fa-layer-group text-[10px]"></i> Annotations
+            </button>
+        </div>
+
+        <!-- Filter bar -->
+        <div id="annFilterBar" class="px-3 py-2 border-b border-gray-100 bg-white flex gap-2 items-center">
+            <select id="annStatusFilter" onchange="loadAnnotations()" class="ann-form-input flex-1 text-xs py-1.5">
                 <option value="">All Statuses</option>
-                <option value="open">Open Issues</option>
+                <option value="open">Open</option>
                 <option value="in_progress">In Progress</option>
                 <option value="resolved">Resolved</option>
                 <option value="closed">Closed</option>
             </select>
+            <button onclick="loadAnnotations()" class="bg-blue-50 text-blue-700 border border-blue-200 rounded-lg px-3 py-1.5 text-xs font-bold hover:bg-blue-100"><i class="fas fa-sync-alt"></i></button>
         </div>
 
-        <div id="annotationsList" class="flex-1 overflow-y-auto p-3 bg-gray-100 space-y-3 relative">
-            <div class="text-center text-gray-400 text-sm mt-10"><i class="fas fa-circle-notch fa-spin"></i> Loading...</div>
+        <!-- Annotations List -->
+        <div id="annList" class="ann-list">
+            <div class="text-center text-gray-400 py-8 text-sm"><i class="fas fa-circle-notch fa-spin mr-2"></i> Loading...</div>
         </div>
     </div>
 
@@ -1039,6 +1107,172 @@
     <button id="mapChatToggleBtn" onclick="toggleChat()" class="fixed bottom-6 right-8 bg-blue-600 text-white w-14 h-14 rounded-full shadow-[0_4px_14px_rgba(0,0,0,0.3)] z-[6000] flex items-center justify-center text-2xl hover:bg-blue-700 hover:scale-105 transition-all">
         <i class="fas fa-comment-dots"></i>
     </button>
+
+    <!-- ═══════════════════════════════════════════════════
+         ANNOTATION CREATE MODAL
+         ═══════════════════════════════════════════════════ -->
+    <div id="annCreateModal">
+        <div class="ann-modal-box resizable-modal" id="annCreateModalBox">
+            <div class="modal-resize-e" data-modal="annCreateModalBox" data-dir="e"></div>
+            <div class="modal-resize-s" data-modal="annCreateModalBox" data-dir="s"></div>
+            <div class="modal-resize-se" data-modal="annCreateModalBox" data-dir="se"></div>
+            <div class="ann-modal-header">
+                <h3 class="font-bold text-base flex items-center gap-2"><i class="fas fa-plus-circle"></i> <span id="annCreateTitle">New Annotation</span></h3>
+                <p class="text-xs text-blue-200 mt-1" id="annCreateShapeInfo">Shape drawn on map</p>
+            </div>
+            <div class="ann-modal-body">
+                <input type="hidden" id="annCreateShapeType" />
+                <input type="hidden" id="annCreateGeoJSON" />
+                <input type="hidden" id="annCreateCenterLat" />
+                <input type="hidden" id="annCreateCenterLng" />
+                <input type="hidden" id="annCreateRadius" />
+                <div class="mb-4">
+                    <label class="ann-form-label">Title *</label>
+                    <input type="text" id="annCreateTitleInput" class="ann-form-input" placeholder="e.g. Site survey area, coverage gap...">
+                </div>
+                <div class="mb-4">
+                    <label class="ann-form-label">Description / Notes</label>
+                    <textarea id="annCreateDesc" class="ann-form-input" rows="3" placeholder="Add details, instructions or observations..."></textarea>
+                </div>
+                <div class="mb-4">
+                    <label class="ann-form-label">Priority</label>
+                    <select id="annCreatePriority" class="ann-form-input">
+                        <option value="low">Low</option>
+                        <option value="normal" selected>Normal</option>
+                        <option value="high">High</option>
+                        <option value="critical">Critical</option>
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="ann-form-label mb-0">Assign to someone?</label>
+                        <button type="button" id="annCreateAssignToggle" onclick="toggleAssignSection('create')"
+                            class="relative inline-flex items-center w-11 h-6 rounded-full transition-colors duration-200 focus:outline-none bg-gray-300"
+                            aria-pressed="false">
+                            <span id="annCreateAssignThumb"
+                                class="inline-block w-4 h-4 bg-white rounded-full shadow transform transition-transform duration-200 translate-x-1"></span>
+                        </button>
+                    </div>
+                    <div id="annCreateAssignSection" class="hidden">
+                        <div id="annCreateAssignTo" class="ann-form-input p-0 overflow-y-auto" style="max-height:110px; min-height:38px;">
+                            <div class="text-xs text-gray-400 p-2 italic">Loading users…</div>
+                        </div>
+                    </div>
+                    <p id="annCreateAssignHint" class="text-xs text-gray-400 italic mt-1">
+                        <i class="fas fa-sticky-note text-purple-400 mr-1"></i>Saved as a personal note (no assignee).
+                    </p>
+                </div>
+                <div class="mb-4">
+                    <label class="ann-form-label">Fill Color</label>
+                    <div class="flex gap-2 items-center">
+                        <input type="color" id="annCreateFillColor" value="#2563eb" class="h-9 w-12 rounded border cursor-pointer">
+                        <span class="text-xs text-gray-500 self-center">Border color is set automatically by status</span>
+                    </div>
+                </div>
+            </div>
+            <div class="ann-modal-footer">
+                <button onclick="cancelAnnotationCreate()" class="btn-ghost">Cancel & Discard</button>
+                <button onclick="saveAnnotation()" class="btn-primary"><i class="fas fa-save mr-1"></i> Save Annotation</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════
+         ANNOTATION DETAIL / EDIT MODAL
+         ═══════════════════════════════════════════════════ -->
+    <div id="annDetailModal">
+        <div class="ann-modal-box resizable-modal" id="annDetailModalBox" style="width:580px;">
+            <div class="modal-resize-e" data-modal="annDetailModalBox" data-dir="e"></div>
+            <div class="modal-resize-w" data-modal="annDetailModalBox" data-dir="w"></div>
+            <div class="modal-resize-s" data-modal="annDetailModalBox" data-dir="s"></div>
+            <div class="modal-resize-se" data-modal="annDetailModalBox" data-dir="se"></div>
+            <div class="ann-modal-header">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h3 id="detailTitle" class="font-bold text-base"></h3>
+                        <p id="detailMeta" class="text-xs text-blue-200 mt-1"></p>
+                    </div>
+                    <button onclick="closeDetailModal()" class="text-white hover:text-blue-200 text-xl ml-4"><i class="fas fa-times"></i></button>
+                </div>
+            </div>
+            <div class="ann-modal-body" style="overflow-y:auto; flex:1; min-height:0;">
+                <div id="detailEditSection" class="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                    <p class="text-[10px] font-bold uppercase text-gray-400 mb-3">Edit Details</p>
+                    <input type="hidden" id="detailAnnId" />
+                    <div class="mb-3">
+                        <label class="ann-form-label">Title</label>
+                        <input type="text" id="detailTitleInput" class="ann-form-input">
+                    </div>
+                    <div class="mb-3">
+                        <label class="ann-form-label">Description</label>
+                        <textarea id="detailDescInput" class="ann-form-input" rows="2"></textarea>
+                    </div>
+                    <div class="grid grid-cols-3 gap-3 mb-3">
+                        <div>
+                            <div class="flex items-center justify-between mb-1">
+                                <label class="ann-form-label mb-0">Assign To <span class="text-blue-400 font-normal normal-case">(multi)</span></label>
+                                <button type="button" id="detailAssignToggle" onclick="toggleAssignSection('detail')"
+                                    class="relative inline-flex items-center w-9 h-5 rounded-full transition-colors duration-200 focus:outline-none bg-gray-300"
+                                    aria-pressed="false">
+                                    <span id="detailAssignThumb"
+                                        class="inline-block w-3.5 h-3.5 bg-white rounded-full shadow transform transition-transform duration-200 translate-x-0.5"></span>
+                                </button>
+                            </div>
+                            <div id="detailAssignSection" class="hidden">
+                                <div id="detailAssignTo" class="ann-form-input p-0 overflow-y-auto" style="max-height:100px; min-height:34px;">
+                                    <div class="text-xs text-gray-400 p-2 italic">Loading…</div>
+                                </div>
+                            </div>
+                            <p id="detailAssignHint" class="text-xs text-gray-400 italic mt-1">
+                                <i class="fas fa-sticky-note text-purple-400 mr-1"></i>No assignee — saved as a note.
+                            </p>
+                        </div>
+                        <div>
+                            <label class="ann-form-label">Status</label>
+                            <select id="detailStatus" class="ann-form-input text-xs py-1.5">
+                                <option value="open">Open</option>
+                                <option value="in_progress">In Progress</option>
+                                <option value="resolved">Resolved</option>
+                                <option value="closed">Closed</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="ann-form-label">Priority</label>
+                            <select id="detailPriority" class="ann-form-input text-xs py-1.5">
+                                <option value="low">Low</option>
+                                <option value="normal">Normal</option>
+                                <option value="high">High</option>
+                                <option value="critical">Critical</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="ann-form-label">Fill Color</label>
+                            <input type="color" id="detailFillColor" class="h-9 w-full rounded border cursor-pointer">
+                        </div>
+                        <div class="flex items-end pb-1">
+                            <p class="text-xs text-gray-400 italic">Border color is set automatically by status</p>
+                        </div>
+                    </div>
+                </div>
+                <!-- Comments -->
+                <div>
+                    <p class="text-[10px] font-bold uppercase text-gray-400 mb-2">Discussion</p>
+                    <div id="commentThread" class="mb-3 max-h-40 overflow-y-auto"></div>
+                    <div class="flex gap-2">
+                        <input type="text" id="newCommentInput" class="ann-form-input flex-1" placeholder="Add a comment..." onkeydown="if(event.key==='Enter') addComment()">
+                        <button onclick="addComment()" class="btn-primary px-4"><i class="fas fa-paper-plane"></i></button>
+                    </div>
+                </div>
+            </div>
+            <div class="ann-modal-footer">
+                <button onclick="deleteAnnotation()" class="btn-danger mr-auto"><i class="fas fa-trash mr-1"></i> Delete</button>
+                <button onclick="closeDetailModal()" class="btn-ghost">Close</button>
+                <button onclick="updateAnnotation()" class="btn-primary"><i class="fas fa-save mr-1"></i> Save Changes</button>
+            </div>
+        </div>
+    </div>
 
     <script>
         function switchMainTab(tab) {
@@ -2632,144 +2866,558 @@
         // ==========================================
         // MAP ANNOTATIONS (LEAFLET.DRAW & API)
         // ==========================================
+        // ==========================================
+        // ANNOTATION SYSTEM — FULL IMPLEMENTATION
+        // ==========================================
+
+        // --- STATE ---
+        let annPanelOpen = false;
+        let currentDrawHandler = null;
+        let pendingLayer = null;
+        let annotationLayers = {};
+        let allUsers = [];
+        let currentAnnId = null;
+        let hiddenAnnotations = new Set();
+        let annotationsVisible = true;
+
+        // Leaflet.draw feature group (replaces drawnItems)
         var drawnItems = new L.FeatureGroup();
         map.addLayer(drawnItems);
-        var annotationDataCache = [];
+
+        // --- HELPERS ---
+        function statusBorderColor(status) {
+            const m = { open: '#2563eb', in_progress: '#f97316', resolved: '#16a34a', closed: '#dc2626' };
+            return m[status] || '#2563eb';
+        }
+
+        function timeAgo(isoString) {
+            if (!isoString) return '';
+            const now = Date.now();
+            const then = new Date(isoString).getTime();
+            const diffMs = now - then;
+            if (diffMs < 0) return 'just now';
+            const secs  = Math.floor(diffMs / 1000);
+            const mins  = Math.floor(diffMs / 60000);
+            const hours = Math.floor(diffMs / 3600000);
+            const days  = Math.floor(diffMs / 86400000);
+            if (secs  < 60) return 'just now';
+            if (mins  < 60) return `${mins} minute${mins !== 1 ? 's' : ''} ago`;
+            if (hours < 24) return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
+            return `${days} day${days !== 1 ? 's' : ''} ago`;
+        }
+
+        function escHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        function updateAnnotationsToggleBtnVisibility() { /* no-op */ }
+
+        // --- PANEL TOGGLE ---
+        function toggleAnnotationPanel() {
+            annPanelOpen = !annPanelOpen;
+            const panel = document.getElementById('annotationPanel');
+            const btn   = document.getElementById('annotationBtn');
+
+            if (annPanelOpen) {
+                // Close other panels
+                const tasksPanel = document.getElementById('tasksPanel');
+                if (tasksPanel && tasksPanel.classList.contains('open')) {
+                    tasksPanel.classList.remove('open');
+                    document.getElementById('tasksBtn').style.background = '#d97706';
+                }
+                const notesPanel = document.getElementById('notesPanel');
+                if (notesPanel && notesPanel.classList.contains('open')) {
+                    notesPanel.classList.remove('open');
+                    document.getElementById('notesBtn').classList.remove('active');
+                }
+                panel.classList.add('open');
+                btn.classList.add('active');
+                setAnnTab('annotations');
+                loadUsersForDropdowns();
+            } else {
+                panel.classList.remove('open');
+                btn.classList.remove('active');
+                cancelDraw();
+            }
+            updateAnnotationsToggleBtnVisibility();
+        }
+
+        function setAnnTab(tab) {
+            loadAnnotations();
+        }
+
+        // --- DRAW TOOLS ---
+        const drawHints = {
+            marker:    'Click on the map to place a point.',
+            polyline:  'Click to place waypoints. Double-click to finish the line.',
+            polygon:   'Click to draw vertices. Click the first point to close the polygon.',
+            rectangle: 'Click and drag to draw a rectangle.',
+            circle:    'Click the center, then drag to set the buffer radius.'
+        };
 
         function startDraw(type) {
-            // Close sidebar so user can see the map clearly while drawing
-            document.getElementById('annotationPanel').classList.remove('open');
-
-            if(type === 'polygon') new L.Draw.Polygon(map, { shapeOptions: { color: '#dc2626' } }).enable();
-            if(type === 'polyline') new L.Draw.Polyline(map, { shapeOptions: { color: '#dc2626' } }).enable();
-            if(type === 'rectangle') new L.Draw.Rectangle(map, { shapeOptions: { color: '#dc2626' } }).enable();
-            if(type === 'circle') new L.Draw.Circle(map, { shapeOptions: { color: '#dc2626' } }).enable();
-            if(type === 'marker') new L.Draw.Marker(map).enable();
+            cancelDraw();
+            document.querySelectorAll('.draw-tool-btn').forEach(b => b.classList.remove('active'));
+            const hint = document.getElementById('drawHint');
+            document.getElementById('drawHintText').textContent = drawHints[type] || 'Draw on the map.';
+            hint.classList.remove('hidden');
+            const options = { shapeOptions: { color: '#2563eb', fillColor: '#2563eb', fillOpacity: 0.2, weight: 2 } };
+            if      (type === 'marker')    currentDrawHandler = new L.Draw.Marker(map, {});
+            else if (type === 'polyline')  currentDrawHandler = new L.Draw.Polyline(map, options);
+            else if (type === 'polygon')   currentDrawHandler = new L.Draw.Polygon(map, options);
+            else if (type === 'rectangle') currentDrawHandler = new L.Draw.Rectangle(map, options);
+            else if (type === 'circle')    currentDrawHandler = new L.Draw.Circle(map, options);
+            if (currentDrawHandler) {
+                currentDrawHandler.enable();
+                const btnMap = { marker: 0, polyline: 1, polygon: 2, rectangle: 3, circle: 4 };
+                const btns = document.querySelectorAll('.draw-tool-btn');
+                if (btns[btnMap[type]]) btns[btnMap[type]].classList.add('active');
+            }
         }
 
         function cancelDraw() {
-            // Cancel any active Leaflet draw handlers
-            map.fire('draw:drawstop');
-            document.getElementById('drawHint').classList.add('hidden');
+            if (currentDrawHandler) {
+                try { currentDrawHandler.disable(); } catch(e) {}
+                currentDrawHandler = null;
+            }
+            if (pendingLayer) {
+                try { map.removeLayer(pendingLayer); } catch(e) {}
+                pendingLayer = null;
+            }
+            const hint = document.getElementById('drawHint');
+            if (hint) hint.classList.add('hidden');
+            document.querySelectorAll('.draw-tool-btn').forEach(b => b.classList.remove('active'));
         }
 
-        // When user finishes drawing a shape on the map
-        map.on(L.Draw.Event.CREATED, function (event) {
-            var layer = event.layer;
-            drawnItems.addLayer(layer);
+        // Listen for drawn shapes — opens the proper Create Modal
+        map.on(L.Draw.Event.CREATED, function(e) {
+            pendingLayer = e.layer;
+            pendingLayer.addTo(map);
 
-            var geojson = layer.toGeoJSON();
-            var shapeType = event.layerType;
-            var radius = shapeType === 'circle' ? layer.getRadius() : null;
-            var center = shapeType === 'circle' ? layer.getLatLng() : (shapeType === 'polygon' ? layer.getBounds().getCenter() : layer.getLatLng());
+            const layerType = e.layerType;
+            const typeMap = { marker: 'point', polyline: 'polyline', polygon: 'polygon', rectangle: 'rectangle', circle: 'circle' };
+            const shapeType = typeMap[layerType] || layerType;
 
-            // Simple Prompt UI (Replaces complex Modals for speed)
-            var title = prompt("Enter Annotation Title:", "New Network Issue");
-            if(!title) {
-                drawnItems.removeLayer(layer); // Cancel if empty
-                document.getElementById('annotationPanel').classList.add('open');
-                return;
+            let geojson = null, centerLat = null, centerLng = null, radiusM = null;
+            if (layerType === 'circle') {
+                const c = pendingLayer.getLatLng();
+                centerLat = c.lat; centerLng = c.lng;
+                radiusM = pendingLayer.getRadius();
+                geojson = JSON.stringify({ type: 'Point', coordinates: [c.lng, c.lat] });
+            } else if (layerType === 'marker') {
+                const ll = pendingLayer.getLatLng();
+                geojson = JSON.stringify({ type: 'Point', coordinates: [ll.lng, ll.lat] });
+            } else {
+                geojson = JSON.stringify(pendingLayer.toGeoJSON().geometry);
             }
-            var desc = prompt("Enter Description/Notes:", "");
-            var priority = prompt("Priority (normal / high / critical):", "normal") || "normal";
 
-            // POST to your Python Backend
-            fetch('/api/annotations', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    title: title,
-                    description: desc,
-                    shape_type: shapeType,
-                    geojson: geojson,
-                    center_lat: center.lat,
-                    center_lng: center.lng,
-                    radius_meters: radius,
-                    priority: priority.toLowerCase(),
-                    status: 'open',
-                    color: '#dc2626',
-                    fill_color: '#dc2626'
-                })
-            }).then(r => r.json()).then(data => {
-                document.getElementById('annotationPanel').classList.add('open');
-                loadAnnotations();
-            }).catch(e => {
-                alert("Failed to save annotation to database.");
-                drawnItems.removeLayer(layer);
-            });
+            document.getElementById('annCreateShapeType').value = shapeType;
+            document.getElementById('annCreateGeoJSON').value = geojson;
+            document.getElementById('annCreateCenterLat').value = centerLat || '';
+            document.getElementById('annCreateCenterLng').value = centerLng || '';
+            document.getElementById('annCreateRadius').value = radiusM || '';
+
+            const shapeLabels = { point: 'Point marker', polyline: 'Line / route', polygon: 'Polygon area', rectangle: 'Rectangle area', circle: `Circle buffer (r=${radiusM ? Math.round(radiusM)+'m' : '?'})` };
+            document.getElementById('annCreateShapeInfo').textContent = shapeLabels[shapeType] || shapeType;
+            document.getElementById('annCreateTitleInput').value = '';
+            document.getElementById('annCreateDesc').value = '';
+            document.getElementById('annCreatePriority').value = 'normal';
+
+            setAssignToggle('create', false);
+            populateUserDropdown('annCreateAssignTo');
+            document.getElementById('annCreateModal').classList.add('show');
+
+            if (currentDrawHandler) { try { currentDrawHandler.disable(); } catch(e) {} currentDrawHandler = null; }
+            const hint = document.getElementById('drawHint');
+            if (hint) hint.classList.add('hidden');
+            document.querySelectorAll('.draw-tool-btn').forEach(b => b.classList.remove('active'));
         });
 
-        // Fetch and Render Annotations from Python
+        // --- SAVE NEW ANNOTATION ---
+        async function saveAnnotation() {
+            const title = document.getElementById('annCreateTitleInput').value.trim();
+            if (!title) { alert('Please enter a title for this annotation.'); return; }
+            const assignedIds = getSelectedAssigneeIds('annCreateAssignTo');
+            const payload = {
+                title,
+                description: document.getElementById('annCreateDesc').value.trim(),
+                shape_type:  document.getElementById('annCreateShapeType').value,
+                geojson:     document.getElementById('annCreateGeoJSON').value,
+                center_lat:  document.getElementById('annCreateCenterLat').value || null,
+                center_lng:  document.getElementById('annCreateCenterLng').value || null,
+                radius_meters: document.getElementById('annCreateRadius').value || null,
+                assigned_to_ids: assignedIds,
+                assigned_to: assignedIds[0] || null,
+                priority:    document.getElementById('annCreatePriority').value,
+                color:       statusBorderColor('open'),
+                fill_color:  document.getElementById('annCreateFillColor').value,
+                status:      'open'
+            };
+            try {
+                const res = await fetch('/api/annotations', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Save failed');
+                document.getElementById('annCreateModal').classList.remove('show');
+                if (pendingLayer) { try { map.removeLayer(pendingLayer); } catch(e) {} pendingLayer = null; }
+                loadAnnotations();
+                loadNotes();
+            } catch(e) { alert('Error saving annotation: ' + e.message); }
+        }
+
+        function cancelAnnotationCreate() {
+            document.getElementById('annCreateModal').classList.remove('show');
+            if (pendingLayer) { try { map.removeLayer(pendingLayer); } catch(e) {} pendingLayer = null; }
+        }
+
+        // --- LOAD & RENDER ANNOTATIONS LIST ---
         async function loadAnnotations() {
-            const status = document.getElementById('annFilterStatus').value;
-            const url = status ? `/api/annotations?status=${status}` : '/api/annotations';
+            const listEl = document.getElementById('annList');
+            if (!listEl) return;
+            listEl.innerHTML = '<div class="text-center text-gray-400 py-8 text-sm"><i class="fas fa-circle-notch fa-spin mr-2"></i> Loading...</div>';
+
+            const status = document.getElementById('annStatusFilter')?.value || '';
+            let url = '/api/annotations?';
+            if (status) url += `status=${status}&`;
 
             try {
                 const res = await fetch(url);
-                annotationDataCache = await res.json();
+                const all = await res.json();
+                const myUsername = window.USER_DATA && window.USER_DATA.username;
 
-                drawnItems.clearLayers();
-                const list = document.getElementById('annotationsList');
-                list.innerHTML = '';
+                // Annotations = has assignees OR created by me
+                const anns = all.filter(a =>
+                    (a.assignees && a.assignees.length > 0) ||
+                    a.created_by_username === myUsername
+                );
 
-                if(annotationDataCache.length === 0) {
-                    list.innerHTML = '<div class="text-center text-gray-400 text-xs mt-10">No annotations found.</div>';
+                // Keep notes badge fresh
+                const notes = all.filter(a =>
+                    (!a.assignees || a.assignees.length === 0) &&
+                    a.created_by_username === myUsername
+                );
+                const badge = document.getElementById('notesBadge');
+                if (notes.length > 0) {
+                    badge && (badge.textContent = notes.length, badge.classList.remove('hidden'));
+                } else {
+                    badge && badge.classList.add('hidden');
+                }
+
+                // Re-render all annotation layers on map
+                renderAnnotationLayers(all);
+
+                if (!anns.length) {
+                    listEl.innerHTML = '<div class="text-center text-gray-400 py-8 text-sm"><i class="fas fa-map-marked-alt text-3xl mb-2"></i><br>No annotations found.</div>';
                     return;
                 }
 
-                annotationDataCache.forEach(ann => {
-                    // 1. Render on Map
-                    let layer;
-                    if(ann.shape_type === 'circle') {
-                        layer = L.circle([ann.center_lat, ann.center_lng], { radius: ann.radius_meters, color: ann.color, fillColor: ann.fill_color, weight: 2 });
-                    } else if(ann.shape_type === 'polygon' && ann.geojson) {
-                        layer = L.geoJSON(JSON.parse(ann.geojson), { style: { color: ann.color, fillColor: ann.fill_color, weight: 2 } });
-                    } else {
-                        layer = L.marker([ann.center_lat, ann.center_lng]);
-                    }
-
-                    layer.bindPopup(`
-                        <div class="font-bold text-blue-800 text-sm border-b pb-1 mb-1">${ann.title}</div>
-                        <div class="text-xs text-gray-600">${ann.description || 'No description provided.'}</div>
-                        <div class="text-[10px] mt-2 font-bold text-gray-400 uppercase">Status: ${ann.status}</div>
-                    `);
-                    drawnItems.addLayer(layer);
-
-                    // 2. Render on Sidebar
-                    const prioColor = ann.priority === 'critical' ? 'bg-red-100 text-red-700 border-red-200' : (ann.priority === 'high' ? 'bg-orange-100 text-orange-700 border-orange-200' : 'bg-gray-100 text-gray-600 border-gray-200');
-
-                    list.innerHTML += `
-                        <div class="bg-white p-3 rounded-lg border border-gray-200 shadow-sm hover:shadow transition cursor-pointer hover:border-blue-300" onclick="map.flyTo([${ann.center_lat}, ${ann.center_lng}], 16)">
-                            <div class="flex justify-between items-start mb-1">
-                                <span class="font-bold text-gray-800 text-sm truncate pr-2">${ann.title}</span>
-                                <span class="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded border ${prioColor}">${ann.priority}</span>
-                            </div>
-                            <div class="text-xs text-gray-500 line-clamp-2 mb-2 leading-tight">${ann.description || '<i>No notes</i>'}</div>
-                            <div class="flex justify-between items-center text-[10px] text-gray-400 font-semibold border-t pt-1.5 border-gray-100">
-                                <span><i class="fas fa-user text-gray-300 mr-1"></i>${ann.created_by_username}</span>
-                                <span><i class="fas fa-clock text-gray-300 mr-1"></i>${new Date(ann.created_at).toLocaleDateString()}</span>
-                            </div>
+                listEl.innerHTML = anns.map(a => {
+                    const shapeIcons = { point: '📍', polyline: '〰️', polygon: '⬡', rectangle: '⬜', circle: '⭕', buffer: '⭕' };
+                    const icon = shapeIcons[a.shape_type] || '📐';
+                    const priorityClass = a.priority !== 'normal' ? `priority-${a.priority}` : '';
+                    const cardStyle = `border-left-color: ${statusBorderColor(a.status)}`;
+                    const isHidden = hiddenAnnotations.has(a.id);
+                    const hiddenClass = isHidden ? 'ann-card-hidden' : '';
+                    const eyeIcon  = isHidden ? 'fa-eye-slash' : 'fa-eye';
+                    const eyeTitle = isHidden ? 'Show on map' : 'Hide from map';
+                    return `
+                    <div id="ann-card-${a.id}" class="ann-card ${priorityClass} ${hiddenClass}" style="${cardStyle}" onclick="openDetailModal(${a.id})">
+                        <div class="ann-card-title">
+                            <span>${icon}</span>
+                            <span class="flex-1 truncate">${escHtml(a.title)}</span>
+                            <span class="status-badge status-${a.status}">${a.status.replace('_',' ')}</span>
+                            <button id="ann-eye-${a.id}" onclick="toggleAnnotationVisibility(${a.id}, event)" title="${eyeTitle}" class="ann-eye-btn ${isHidden ? 'ann-eye-hidden' : ''}"><i class="fas ${eyeIcon}"></i></button>
                         </div>
-                    `;
-                });
+                        <div class="ann-card-meta">
+                            <span><i class="fas fa-user text-gray-400 mr-1"></i>${escHtml(a.created_by_username)}</span>
+                            ${(a.assignees && a.assignees.length)
+                                ? `<span><i class="fas fa-arrow-right text-blue-400 mx-0.5"></i>${a.assignees.map(u => `<span class="inline-flex items-center bg-blue-100 text-blue-700 rounded-full px-1.5 py-0.5 text-[10px] font-semibold mr-0.5">${escHtml(u.full_name || u.username)}</span>`).join('')}</span>`
+                                : ''}
+                            ${a.comment_count > 0 ? `<span><i class="fas fa-comment text-gray-400 mr-1"></i>${a.comment_count}</span>` : ''}
+                            <span class="ml-auto">${timeAgo(a.created_at)}</span>
+                        </div>
+                        ${a.description ? `<p class="text-[11px] text-gray-500 mt-1 truncate">${escHtml(a.description)}</p>` : ''}
+                    </div>`;
+                }).join('');
             } catch(e) {
-                console.error(e);
-                document.getElementById('annotationsList').innerHTML = '<div class="text-center text-red-500 text-xs mt-10">Error loading data.</div>';
+                listEl.innerHTML = `<div class="text-center text-red-400 py-8 text-sm"><i class="fas fa-exclamation-triangle mr-2"></i>Failed to load: ${e.message}</div>`;
             }
         }
 
-        // Connect the "Eye" button to toggle Map visibility
-        function toggleAllAnnotations() {
-            const btn = document.getElementById('showAnnotationsBtn');
-            btn.classList.toggle('bg-gray-500');
+        // --- RENDER ANNOTATION LAYERS ON MAP ---
+        function renderAnnotationLayers(anns) {
+            Object.values(annotationLayers).forEach(l => { try { map.removeLayer(l); } catch(e) {} });
+            annotationLayers = {};
 
-            if (map.hasLayer(drawnItems)) {
-                map.removeLayer(drawnItems);
-                btn.style.opacity = '0.5';
+            anns.forEach(a => {
+                try {
+                    const style = {
+                        color:       statusBorderColor(a.status),
+                        fillColor:   a.fill_color || '#2563eb',
+                        fillOpacity: a.fill_opacity != null ? a.fill_opacity : 0.2,
+                        weight:      a.stroke_weight || 2,
+                        opacity:     0.9
+                    };
+                    let layer;
+                    if (a.shape_type === 'circle' || a.shape_type === 'buffer') {
+                        if (a.center_lat && a.center_lng && a.radius_meters) {
+                            layer = L.circle([a.center_lat, a.center_lng], { radius: a.radius_meters, ...style });
+                        }
+                    } else if (a.geojson) {
+                        const geom = JSON.parse(a.geojson);
+                        if (a.shape_type === 'point') {
+                            const coords = geom.coordinates;
+                            const pinIcon = L.divIcon({
+                                className: '',
+                                html: `<div style="width:14px;height:14px;border-radius:50%;background:${a.fill_color||'#2563eb'};border:2.5px solid ${statusBorderColor(a.status)};box-shadow:0 2px 6px rgba(0,0,0,0.4);"></div>`,
+                                iconSize: [14,14], iconAnchor: [7,7]
+                            });
+                            layer = L.marker([coords[1], coords[0]], { icon: pinIcon });
+                        } else {
+                            layer = L.geoJSON(geom, { style: () => style });
+                        }
+                    }
+                    if (layer) {
+                        layer.bindTooltip(`<b>${escHtml(a.title)}</b><br><span class="status-badge status-${a.status}">${a.status}</span>`, { sticky: true });
+                        layer.on('click', () => openDetailModal(a.id));
+                        if (!hiddenAnnotations.has(a.id)) layer.addTo(map);
+                        annotationLayers[a.id] = layer;
+                    }
+                } catch(e) { console.warn('Could not render annotation', a.id, e); }
+            });
+        }
+
+        // --- TOGGLE INDIVIDUAL ANNOTATION VISIBILITY ---
+        function toggleAnnotationVisibility(id, e) {
+            e.stopPropagation();
+            if (hiddenAnnotations.has(id)) {
+                hiddenAnnotations.delete(id);
+                if (annotationLayers[id]) annotationLayers[id].addTo(map);
             } else {
-                map.addLayer(drawnItems);
-                btn.style.opacity = '1';
+                hiddenAnnotations.add(id);
+                if (annotationLayers[id]) { try { map.removeLayer(annotationLayers[id]); } catch(e) {} }
             }
+            const card   = document.getElementById('ann-card-' + id);
+            const eyeBtn = document.getElementById('ann-eye-' + id);
+            if (card) card.classList.toggle('ann-card-hidden', hiddenAnnotations.has(id));
+            if (eyeBtn) {
+                eyeBtn.innerHTML = hiddenAnnotations.has(id) ? '<i class="fas fa-eye-slash"></i>' : '<i class="fas fa-eye"></i>';
+                eyeBtn.title     = hiddenAnnotations.has(id) ? 'Show on map' : 'Hide from map';
+                eyeBtn.classList.toggle('ann-eye-hidden', hiddenAnnotations.has(id));
+            }
+        }
+
+        // --- TOGGLE ALL ANNOTATIONS ---
+        function toggleAllAnnotations() {
+            const eyeBtn = document.getElementById('showAnnotationsBtn');
+            annotationsVisible = !annotationsVisible;
+            Object.entries(annotationLayers).forEach(([id, layer]) => {
+                try {
+                    if (annotationsVisible) {
+                        if (!hiddenAnnotations.has(parseInt(id))) layer.addTo(map);
+                    } else {
+                        map.removeLayer(layer);
+                    }
+                } catch(e) {}
+            });
+            try {
+                if (annotationsVisible) { if (!map.hasLayer(drawnItems)) map.addLayer(drawnItems); }
+                else { if (map.hasLayer(drawnItems)) map.removeLayer(drawnItems); }
+            } catch(e) {}
+            if (eyeBtn) {
+                eyeBtn.innerHTML = annotationsVisible ? '<i class="fas fa-eye"></i>' : '<i class="fas fa-eye-slash"></i>';
+                eyeBtn.classList.toggle('annotations-hidden', !annotationsVisible);
+                eyeBtn.title = annotationsVisible ? 'Hide annotation shapes' : 'Show annotation shapes';
+            }
+        }
+
+        // --- DETAIL MODAL ---
+        async function openDetailModal(id) {
+            currentAnnId = id;
+            const res  = await fetch('/api/annotations');
+            const anns = await res.json();
+            const ann  = anns.find(a => a.id === id);
+            if (!ann) return;
+
+            document.getElementById('detailTitle').textContent    = ann.title;
+            document.getElementById('detailMeta').textContent     = `Created by ${ann.created_by_username} · ${timeAgo(ann.created_at)}`;
+            document.getElementById('detailAnnId').value          = id;
+            document.getElementById('detailTitleInput').value     = ann.title;
+            document.getElementById('detailDescInput').value      = ann.description || '';
+            document.getElementById('detailStatus').value         = ann.status;
+            document.getElementById('detailPriority').value       = ann.priority;
+            document.getElementById('detailFillColor').value      = ann.fill_color || '#2563eb';
+
+            await loadUsersForDropdowns();
+            const currentAssigneeIds = (ann.assignees || []).map(a => a.id);
+            setAssignToggle('detail', currentAssigneeIds.length > 0);
+            populateUserDropdown('detailAssignTo', currentAssigneeIds);
+
+            // Fly to layer on map
+            if (annotationLayers[id]) {
+                const layer = annotationLayers[id];
+                if (layer.getBounds)  map.flyToBounds(layer.getBounds(), { padding: [80,80], maxZoom: 15 });
+                else if (layer.getLatLng) map.flyTo(layer.getLatLng(), 14);
+            }
+
+            // Only show delete if current user is the creator
+            const deleteBtn = document.querySelector('#annDetailModal .ann-modal-footer .btn-danger');
+            if (deleteBtn) {
+                const me = window.USER_DATA && window.USER_DATA.username;
+                deleteBtn.style.display = (me && ann.created_by_username === me) ? '' : 'none';
+            }
+
+            loadComments(id);
+            document.getElementById('annDetailModal').classList.add('show');
+        }
+
+        async function loadComments(id) {
+            const thread = document.getElementById('commentThread');
+            thread.innerHTML = '<div class="text-xs text-gray-400"><i class="fas fa-circle-notch fa-spin"></i> Loading...</div>';
+            try {
+                const res      = await fetch(`/api/annotations/${id}/comments`);
+                const comments = await res.json();
+                if (!comments.length) {
+                    thread.innerHTML = '<div class="text-xs text-gray-400 italic">No comments yet. Be the first to comment.</div>';
+                    return;
+                }
+                thread.innerHTML = comments.map(c => `
+                    <div class="comment-bubble">
+                        <div class="flex justify-between">
+                            <span class="author">${escHtml(c.author_username)}</span>
+                            <span class="time">${timeAgo(c.created_at)}</span>
+                        </div>
+                        <div class="body">${escHtml(c.body)}</div>
+                    </div>`).join('');
+                thread.scrollTop = thread.scrollHeight;
+            } catch(e) {
+                thread.innerHTML = '<div class="text-xs text-red-400">Failed to load comments.</div>';
+            }
+        }
+
+        async function addComment() {
+            const input = document.getElementById('newCommentInput');
+            const body  = input.value.trim();
+            if (!body || !currentAnnId) return;
+            try {
+                await fetch(`/api/annotations/${currentAnnId}/comments`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ body })
+                });
+                input.value = '';
+                loadComments(currentAnnId);
+            } catch(e) { alert('Failed to add comment'); }
+        }
+
+        async function updateAnnotation() {
+            const id = document.getElementById('detailAnnId').value;
+            const assignedIds = getSelectedAssigneeIds('detailAssignTo');
+            const payload = {
+                title:           document.getElementById('detailTitleInput').value,
+                description:     document.getElementById('detailDescInput').value,
+                assigned_to_ids: assignedIds,
+                assigned_to:     assignedIds[0] || null,
+                status:          document.getElementById('detailStatus').value,
+                priority:        document.getElementById('detailPriority').value,
+                color:           statusBorderColor(document.getElementById('detailStatus').value),
+                fill_color:      document.getElementById('detailFillColor').value,
+            };
+            try {
+                const res = await fetch(`/api/annotations/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!res.ok) { const d = await res.json(); throw new Error(d.error); }
+                closeDetailModal();
+                loadAnnotations();
+                const np = document.getElementById('notesPanel');
+                if (np && np.classList.contains('open')) loadNotes();
+            } catch(e) { alert('Update failed: ' + e.message); }
+        }
+
+        async function deleteAnnotation() {
+            if (!confirm('Delete this annotation? This cannot be undone.')) return;
+            const id = document.getElementById('detailAnnId').value;
+            try {
+                await fetch(`/api/annotations/${id}`, { method: 'DELETE' });
+                closeDetailModal();
+                loadAnnotations();
+                const np = document.getElementById('notesPanel');
+                if (np && np.classList.contains('open')) loadNotes();
+            } catch(e) { alert('Delete failed: ' + e.message); }
+        }
+
+        function closeDetailModal() {
+            document.getElementById('annDetailModal').classList.remove('show');
+            currentAnnId = null;
+        }
+
+        // --- USER DROPDOWN HELPERS ---
+        async function loadUsersForDropdowns() {
+            try {
+                const res = await fetch('/api/users/list');
+                allUsers  = await res.json();
+                populateUserDropdown('annCreateAssignTo');
+                populateUserDropdown('detailAssignTo');
+            } catch(e) { console.warn('Could not load users list', e); }
+        }
+
+        function populateUserDropdown(containerId, selectedIds = []) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            const selectedSet = new Set(selectedIds.map(String));
+            if (!allUsers.length) {
+                container.innerHTML = '<div class="text-xs text-gray-400 p-2 italic">No users found</div>';
+                return;
+            }
+            container.innerHTML = allUsers.map(u => `
+                <label class="flex items-center gap-2 px-3 py-1.5 hover:bg-blue-50 cursor-pointer text-xs text-gray-700 transition-colors">
+                    <input type="checkbox" class="assignee-cb accent-blue-600 flex-shrink-0"
+                           value="${u.id}" ${selectedSet.has(String(u.id)) ? 'checked' : ''}>
+                    <span class="truncate">${escHtml(u.full_name || u.username)} <span class="text-gray-400">(${escHtml(u.role)})</span></span>
+                </label>`).join('');
+        }
+
+        function getSelectedAssigneeIds(containerId) {
+            const container = document.getElementById(containerId);
+            if (!container) return [];
+            return [...container.querySelectorAll('.assignee-cb:checked')].map(cb => parseInt(cb.value));
+        }
+
+        // --- ASSIGN TOGGLE ---
+        function toggleAssignSection(modal) {
+            const isCreate  = modal === 'create';
+            const toggleBtn = document.getElementById(isCreate ? 'annCreateAssignToggle' : 'detailAssignToggle');
+            const thumb     = document.getElementById(isCreate ? 'annCreateAssignThumb'  : 'detailAssignThumb');
+            const section   = document.getElementById(isCreate ? 'annCreateAssignSection': 'detailAssignSection');
+            const hint      = document.getElementById(isCreate ? 'annCreateAssignHint'   : 'detailAssignHint');
+            const isOn  = toggleBtn.getAttribute('aria-pressed') === 'true';
+            const nowOn = !isOn;
+            toggleBtn.setAttribute('aria-pressed', String(nowOn));
+            if (nowOn) {
+                toggleBtn.classList.remove('bg-gray-300'); toggleBtn.classList.add('bg-blue-600');
+                thumb.classList.remove(isCreate ? 'translate-x-1' : 'translate-x-0.5');
+                thumb.classList.add(isCreate ? 'translate-x-6' : 'translate-x-5');
+                section.classList.remove('hidden'); hint.classList.add('hidden');
+            } else {
+                toggleBtn.classList.remove('bg-blue-600'); toggleBtn.classList.add('bg-gray-300');
+                thumb.classList.remove(isCreate ? 'translate-x-6' : 'translate-x-5');
+                thumb.classList.add(isCreate ? 'translate-x-1' : 'translate-x-0.5');
+                section.classList.add('hidden'); hint.classList.remove('hidden');
+            }
+        }
+
+        function setAssignToggle(modal, on) {
+            const isCreate  = modal === 'create';
+            const toggleBtn = document.getElementById(isCreate ? 'annCreateAssignToggle' : 'detailAssignToggle');
+            const current   = toggleBtn.getAttribute('aria-pressed') === 'true';
+            if (current !== on) toggleAssignSection(modal);
         }
 
         // Sidebar Toggle Logic
@@ -3061,6 +3709,138 @@
                 </div>
             </div>`;
         }
+
+        async function openDetailModal(id) {
+        currentAnnId = id;
+
+        // Load data
+        const res = await fetch('/api/annotations');
+        const anns = await res.json();
+        const ann = anns.find(a => a.id === id);
+        if (!ann) return;
+
+        document.getElementById('detailTitle').textContent = ann.title;
+        document.getElementById('detailMeta').textContent = `Created by ${ann.created_by_username} · ${timeAgo(ann.created_at)}`;
+        document.getElementById('detailAnnId').value = id;
+        document.getElementById('detailTitleInput').value = ann.title;
+        document.getElementById('detailDescInput').value = ann.description || '';
+        document.getElementById('detailStatus').value = ann.status;
+        document.getElementById('detailPriority').value = ann.priority;
+        document.getElementById('detailFillColor').value = ann.fill_color || '#2563eb';
+
+        await loadUsersForDropdowns();
+        // Pre-select all current assignees + set toggle state
+        const currentAssigneeIds = (ann.assignees || []).map(a => a.id);
+        const hasAssignees = currentAssigneeIds.length > 0;
+        setAssignToggle('detail', hasAssignees);
+        populateUserDropdown('detailAssignTo', currentAssigneeIds);
+
+        // Fly to layer
+        if (annotationLayers[id]) {
+            const layer = annotationLayers[id];
+            if (layer.getBounds) {
+                map.flyToBounds(layer.getBounds(), { padding: [80, 80], maxZoom: 15 });
+            } else if (layer.getLatLng) {
+                map.flyTo(layer.getLatLng(), 14);
+            }
+        }
+
+        // Show delete button only if the current user created this annotation
+        const deleteBtn = document.querySelector('#annDetailModal .ann-modal-footer .btn-danger');
+        if (deleteBtn) {
+            const currentUsername = window.USER_DATA && window.USER_DATA.username;
+            deleteBtn.style.display = (currentUsername && ann.created_by_username === currentUsername) ? '' : 'none';
+        }
+
+        // Load comments
+        loadComments(id);
+        document.getElementById('annDetailModal').classList.add('show');
+    }
+
+    async function loadComments(id) {
+        const thread = document.getElementById('commentThread');
+        thread.innerHTML = '<div class="text-xs text-gray-400"><i class="fas fa-circle-notch fa-spin"></i> Loading...</div>';
+        try {
+            const res = await fetch(`/api/annotations/${id}/comments`);
+            const comments = await res.json();
+            if (!comments.length) {
+                thread.innerHTML = '<div class="text-xs text-gray-400 italic">No comments yet. Be the first to comment.</div>';
+                return;
+            }
+            thread.innerHTML = comments.map(c => `
+                <div class="comment-bubble">
+                    <div class="flex justify-between">
+                        <span class="author">${c.author_username}</span>
+                        <span class="time">${timeAgo(c.created_at)}</span>
+                    </div>
+                    <div class="body">${c.body}</div>
+                </div>
+            `).join('');
+            thread.scrollTop = thread.scrollHeight;
+        } catch(e) {
+            thread.innerHTML = '<div class="text-xs text-red-400">Failed to load comments.</div>';
+        }
+    }
+
+    async function addComment() {
+        const input = document.getElementById('newCommentInput');
+        const body = input.value.trim();
+        if (!body || !currentAnnId) return;
+        try {
+            await fetch(`/api/annotations/${currentAnnId}/comments`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ body })
+            });
+            input.value = '';
+            loadComments(currentAnnId);
+        } catch(e) { alert('Failed to add comment'); }
+    }
+
+    async function updateAnnotation() {
+        const id = document.getElementById('detailAnnId').value;
+        const assignedIds = getSelectedAssigneeIds('detailAssignTo');
+        const payload = {
+            title: document.getElementById('detailTitleInput').value,
+            description: document.getElementById('detailDescInput').value,
+            assigned_to_ids: assignedIds,
+            assigned_to: assignedIds[0] || null,
+            status: document.getElementById('detailStatus').value,
+            priority: document.getElementById('detailPriority').value,
+            color: statusBorderColor(document.getElementById('detailStatus').value),
+            fill_color: document.getElementById('detailFillColor').value,
+        };
+        try {
+            const res = await fetch(`/api/annotations/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (!res.ok) { const d = await res.json(); throw new Error(d.error); }
+            closeDetailModal();
+            loadAnnotations();
+            // Refresh notes panel if open
+            const np = document.getElementById('notesPanel');
+            if (np && np.classList.contains('open')) loadNotes();
+        } catch(e) { alert('Update failed: ' + e.message); }
+    }
+
+    async function deleteAnnotation() {
+        if (!confirm('Delete this annotation? This cannot be undone.')) return;
+        const id = document.getElementById('detailAnnId').value;
+        try {
+            await fetch(`/api/annotations/${id}`, { method: 'DELETE' });
+            closeDetailModal();
+            loadAnnotations();
+            const np = document.getElementById('notesPanel');
+            if (np && np.classList.contains('open')) loadNotes();
+        } catch(e) { alert('Delete failed: ' + e.message); }
+    }
+
+    function closeDetailModal() {
+        document.getElementById('annDetailModal').classList.remove('show');
+        currentAnnId = null;
+    }
 
         function flyToTask(lat, lng) {
             map.flyTo([lat, lng], 15, { duration: 1.2 });
