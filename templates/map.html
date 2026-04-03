@@ -2,8 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Network Coverage (Satellite View)</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Coverage (Satellite View)</title>    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
@@ -17,15 +16,12 @@
     <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 
     <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
 
     <script src="https://cdn.bokeh.org/bokeh/release/bokeh-3.9.0.min.js"></script>
     <script src="https://cdn.bokeh.org/bokeh/release/bokeh-widgets-3.9.0.min.js"></script>
     <script src="https://cdn.bokeh.org/bokeh/release/bokeh-tables-3.9.0.min.js"></script>
     <script src="https://cdn.bokeh.org/bokeh/release/bokeh-api-3.9.0.min.js"></script>
-
-    <script src="https://unpkg.com/@superset-ui/embedded-sdk"></script>
 
     <style>
         body, html { height: 100%; margin: 0; font-family: 'Inter', sans-serif; background: #f3f4f6; overflow: hidden; }
@@ -126,10 +122,9 @@
         /* Add this right after #reviewBtn */
         #dashboardBtn { top: 10px; left: 682px; background: #0ea5e9; }
         #sidebar.collapsed ~ #dashboardBtn { left: 342px !important; }
-        
+
         /* Add this to force the embedded iframe to fill the container */
-        #supersetEmbedContainer iframe { width: 100%; height: 100%; border: none; }
-        
+        #metabaseEmbedContainer iframe { width: 100%; height: 100%; border: none; }
 
         /* Sliding Panels */
         .sliding-panel { position: absolute; top: 0; right: 0; bottom: 0; width: 360px; background: #ffffff; z-index: 1500; display: flex; flex-direction: column; box-shadow: -4px 0 20px rgba(0,0,0,0.12); border-left: 1px solid #e5e7eb; transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); }
@@ -292,7 +287,7 @@
     <button id="reviewBtn" class="tool-icon-btn" onclick="openReviewModal()" title="Submit Review">
         <i class="fas fa-star"></i>
     </button>
-    <button id="dashboardBtn" class="tool-icon-btn" onclick="openSupersetDashboard()" title="NetAlytics Dashboard">
+    <button id="dashboardBtn" class="tool-icon-btn" onclick="openMetabaseDashboard()" title="NetAlytics Dashboard">
         <i class="fas fa-chart-pie"></i>
     </button>
 
@@ -486,15 +481,15 @@
         </div>
     </div>
 
-    <div id="supersetModal" class="hidden fixed inset-0 bg-black bg-opacity-75 z-[6000] flex items-center justify-center">
+    <div id="metabaseModal" class="hidden fixed inset-0 bg-black bg-opacity-75 z-[6000] flex items-center justify-center">
         <div class="bg-white rounded-xl shadow-2xl w-[95vw] h-[95vh] flex flex-col overflow-hidden">
             <div class="bg-gray-800 text-white p-3 flex justify-between items-center flex-shrink-0">
-                <h3 class="font-bold text-lg"><i class="fas fa-chart-pie mr-2"></i> Network Analytics Dashboard</h3>
-                <button onclick="closeSupersetDashboard()" class="text-gray-300 hover:text-white text-xl transition-colors">
+                <h3 class="font-bold text-lg"><i class="fas fa-chart-pie mr-2"></i> NetAlytics Dashboard</h3>
+                <button onclick="closeMetabaseDashboard()" class="text-gray-300 hover:text-white text-xl transition-colors">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
-            <div id="supersetEmbedContainer" class="flex-1 w-full h-full bg-gray-100 overflow-hidden">
+            <div id="metabaseEmbedContainer" class="flex-1 w-full h-full bg-gray-100 overflow-hidden">
             </div>
         </div>
     </div>
@@ -2627,56 +2622,41 @@
         })();
 
         // ==========================================
-        // SUPERSET DASHBOARD EMBEDDING
+        // METABASE DASHBOARD EMBEDDING
         // ==========================================
-        
-        // 1. REPLACE WITH YOUR EC2 PUBLIC IP OR DOMAIN (Keep port 8088)
-        
-        const SUPERSET_DOMAIN = "http://qdt-ai.com:8088"; 
-        
-        // 2. REPLACE WITH YOUR EMBEDDED DASHBOARD UUID 
-        const SUPERSET_DASHBOARD_ID = "e8a5704f-7486-438c-a6ba-03e29a613041"; 
-        
-        async function openSupersetDashboard() {
-            document.getElementById('supersetModal').classList.remove('hidden');
-            const container = document.getElementById('supersetEmbedContainer');
-            
+
+        // Metabase uses simple integers for Dashboard IDs.
+        // 1 is usually the default first dashboard you create.
+        const METABASE_DASHBOARD_ID = 2;
+
+        async function openMetabaseDashboard() {
+            document.getElementById('metabaseModal').classList.remove('hidden');
+            const container = document.getElementById('metabaseEmbedContainer');
+
             // Show a loading spinner
             container.innerHTML = '<div class="flex items-center justify-center h-full text-gray-500"><i class="fas fa-circle-notch fa-spin text-3xl mr-3"></i> Loading Analytics Engine...</div>';
-        
+
             try {
-                // Fetch the secure Guest Token from your Flask backend
-                const res = await fetch(`/api/superset/guest-token?dashboard_id=${SUPERSET_DASHBOARD_ID}`);
+                // Fetch the secure, stateless JWT URL from your Flask backend
+                const res = await fetch(`/api/dashboard/embed?dashboard_id=${METABASE_DASHBOARD_ID}`);
                 const data = await res.json();
 
-                if (!res.ok || !data.token) {
-                    throw new Error(data.error || "Failed to fetch Superset token");
+                if (!res.ok || !data.iframeUrl) {
+                    throw new Error(data.error || "Failed to fetch Metabase URL");
                 }
-        
-                // Clear the loading spinner
-                container.innerHTML = '';
-        
-                // Inject the Dashboard using the official SDK
-                supersetEmbeddedSdk.embedDashboard({
-                    id: SUPERSET_DASHBOARD_ID,
-                    supersetDomain: SUPERSET_DOMAIN,
-                    mountPoint: container,
-                    fetchGuestToken: () => data.token,
-                    dashboardUiConfig: {
-                        hideTitle: true,
-                        hideChartControls: false,
-                        hideTab: false,
-                    }
-                });
+
+                // Inject the standard HTML iframe (No bulky SDK required!)
+                container.innerHTML = `<iframe src="${data.iframeUrl}" frameborder="0" width="100%" height="100%" allowtransparency></iframe>`;
+
             } catch (err) {
                 console.error("Dashboard Embed Error:", err);
                 container.innerHTML = `<div class="flex items-center justify-center h-full text-red-500 font-bold"><i class="fas fa-exclamation-triangle mr-2"></i> Error loading dashboard: ${err.message}</div>`;
             }
         }
 
-        function closeSupersetDashboard() {
-            document.getElementById('supersetModal').classList.add('hidden');
-            document.getElementById('supersetEmbedContainer').innerHTML = ''; // Clean up iframe memory
+        function closeMetabaseDashboard() {
+            document.getElementById('metabaseModal').classList.add('hidden');
+            document.getElementById('metabaseEmbedContainer').innerHTML = ''; // Clean up iframe memory
         }
 
 
