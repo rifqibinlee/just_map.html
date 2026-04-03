@@ -2007,8 +2007,8 @@
                 clearCoverage();
                 siteMarkerMap = {};
 
-                // Update the visible sites counter!
-                document.getElementById('siteCount').textContent = validSites.length.toLocaleString();
+                // Visible site count is now driven by viewport; trigger after markers load
+                setTimeout(updateVisibleSiteCount, 100);
 
                 const mList = []; const cList = []; const heatPoints = []; let congCount = 0;
 
@@ -2050,7 +2050,7 @@
 
                 markers.addLayers(mList); congestedMarkers.addLayers(cList);
                 if (heatPoints.length > 0) heatmapLayer.setLatLngs(heatPoints);
-                document.getElementById('congCount').textContent = congCount.toLocaleString();
+                setTimeout(updateVisibleSiteCount, 100);
 
             } catch (e) {
                 console.error("Map Data Load Error:", e);
@@ -2519,6 +2519,45 @@
         }
         map.on('click', (e) => clearCoverage());
         map.on('boxzoomend', function(e) { siteDataCache.forEach(site => { if (e.boxZoomBounds.contains([site.lat, site.lng])) drawSiteCoverage(site, true); }); });
+
+        // ── Visible Site Count (viewport-driven, matching map.html) ──
+        function updateVisibleSiteCount() {
+            if (!siteDataCache || siteDataCache.length === 0) return;
+            const bounds = map.getBounds();
+            let visibleCount = 0;
+            let visibleCongestedCount = 0;
+
+            siteDataCache.forEach(site => {
+                if (site && site.lat && site.lng && bounds.contains(L.latLng(site.lat, site.lng))) {
+                    visibleCount++;
+
+                    let isCongested = false;
+                    if (site.sectors) {
+                        const areaStr = String(site.area_target || '').toLowerCase();
+                        const isUrban = areaStr.includes('urban') || areaStr.includes('kmc');
+                        const prbThreshold = isUrban ? 80.0 : 92.0;
+
+                        for (let sec of site.sectors) {
+                            const p = parseFloat(sec.prb ?? 0);
+                            if (p >= prbThreshold) {
+                                isCongested = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (isCongested) {
+                        visibleCongestedCount++;
+                    }
+                }
+            });
+
+            document.getElementById('siteCount').textContent = visibleCount.toLocaleString();
+            document.getElementById('congCount').textContent = visibleCongestedCount.toLocaleString();
+        }
+
+        map.on('moveend', updateVisibleSiteCount);
+        map.on('zoomend', updateVisibleSiteCount);
 
         function openPlotModal(siteId) { currentModalSiteId = siteId; document.getElementById('modalSiteIdDisplay').textContent = siteId; document.getElementById('plotModalOverlay').style.display = 'flex'; refreshPlot(); }
         function closePlotModal() { document.getElementById('plotModalOverlay').style.display = 'none'; document.getElementById('mapPlotContainer').innerHTML = ''; }
