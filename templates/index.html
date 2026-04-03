@@ -30,6 +30,7 @@
   <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+
   <script src="https://unpkg.com/@superset-ui/embedded-sdk"></script>
 
     <style>
@@ -159,8 +160,8 @@
         .tool-icon-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0,0,0,0.3); }
 
         /* Add this to force the embedded iframe to fill the container */
-        #supersetEmbedContainer iframe { width: 100%; height: 100%; border: none; }
-        
+        #metabaseEmbedContainer iframe { width: 100%; height: 100%; border: none; }
+
 
         /* Sliding Panels */
         .sliding-panel { position: absolute; top: 0; right: 0; bottom: 0; width: 360px; background: #ffffff; z-index: 1500; display: flex; flex-direction: column; box-shadow: -4px 0 20px rgba(0,0,0,0.12); border-left: 1px solid #e5e7eb; transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); }
@@ -282,7 +283,7 @@
     </style>
 </head>
 <body class="bg-gray-50">
-    
+
     <script>
         window.APP_CONFIG = {
             role: "{{ role }}"
@@ -302,12 +303,12 @@
                 <i class="fas fa-network-wired"></i> NetAlytics
             </h1>
         </div>
-        
+
         <div class="flex gap-6 absolute left-1/2 transform -translate-x-1/2">
             <button id="tabBtnDashboard" onclick="switchMainTab('dashboard')" class="text-white font-bold border-b-2 border-white pb-1 transition-all">
                 <i class="fas fa-chart-line mr-1"></i> Dashboard
             </button>
-            <button id="tabBtnMap" onclick="switchMainTab('map')" class="text-white opacity-70 hover:opacity-100 font-bold border-b-2 border-transparent hover:border-white pb-1 transition-all">
+            <button id="tabBtnMap" onclick="switchMainTab('map')" class="text-white opacity-70 hover:opacity-100 font-bold border-b-2 border-transparent hover:border-whitepb-1 transition-all">
                 <i class="fas fa-map-marked-alt mr-1"></i> Coverage Map
             </button>
         </div>
@@ -333,7 +334,7 @@
                     <i class="fas fa-user-circle"></i> {{ username }} <i class="fas fa-chevron-down text-xs ml-1"></i>
                 </button>
                 <div id="menuDropdown" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl overflow-hidden text-gray-700 border border-gray-100">
-                    <button onclick="openSettingsModal()" class="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-2 border-b border-gray-50"><i class="fas fa-cog text-gray-400"></i> Settings</button>
+                    <button onclick="openSettingsModal()" class="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-2 border-b border-gray-50"><i class="fasfa-cog text-gray-400"></i> Settings</button>
                     <a href="/logout" class="block px-4 py-3 hover:bg-red-50 text-red-600 flex items-center gap-2"><i class="fas fa-sign-out-alt"></i> Logout</a>
                 </div>
             </div>
@@ -377,7 +378,7 @@
             </div>
         </div>
     </div>
-   
+
 
         <div id="resultsSection" class="hidden">
             <div class="bg-white rounded-lg shadow-md p-5 mb-6 sticky top-0 z-40 border-b-4 border-blue-600 transition-all">
@@ -639,7 +640,7 @@
         <i class="fas fa-tasks"></i>
         <span id="tasksBadge" class="hidden absolute -top-1 -right-1 bg-red-500 text-white text-[9px] rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-0.5 font-bold">0</span>
     </button>
-    <button id="dashboardBtn" class="tool-icon-btn" onclick="openSupersetDashboard()" title="NetAlytics Dashboard">
+    <button id="dashboardBtn" class="tool-icon-btn" onclick="openMetabaseDashboard()" title="NetAlytics Dashboard">
         <i class="fas fa-chart-pie"></i>
     </button>
 
@@ -792,18 +793,18 @@
         </div>
     </div>
 
-    <div id="supersetModal" class="hidden fixed inset-0 bg-black bg-opacity-75 z-[6000] flex items-center justify-center">
-        <div class="bg-white rounded-xl shadow-2xl w-[95vw] h-[95vh] flex flex-col overflow-hidden">
-            <div class="bg-gray-800 text-white p-3 flex justify-between items-center flex-shrink-0">
-                <h3 class="font-bold text-lg"><i class="fas fa-chart-pie mr-2"></i> Network Analytics Dashboard</h3>
-                <button onclick="closeSupersetDashboard()" class="text-gray-300 hover:text-white text-xl transition-colors">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div id="supersetEmbedContainer" class="flex-1 w-full h-full bg-gray-100 overflow-hidden">
+    <div id="metabaseModal" class="hidden fixed inset-0 bg-black bg-opacity-75 z-[6000] flex items-center justify-center">
+            <div class="bg-white rounded-xl shadow-2xl w-[95vw] h-[95vh] flex flex-col overflow-hidden">
+                <div class="bg-gray-800 text-white p-3 flex justify-between items-center flex-shrink-0">
+                    <h3 class="font-bold text-lg"><i class="fas fa-chart-pie mr-2"></i> NetAlytics Dashboard</h3>
+                    <button onclick="closeMetabaseDashboard()" class="text-gray-300 hover:text-white text-xl transition-colors">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div id="metabaseEmbedContainer" class="flex-1 w-full h-full bg-gray-100 overflow-hidden">
+                </div>
             </div>
         </div>
-    </div>
 
     <div id="sectorPricingPanel" class="hidden fixed inset-0 bg-black bg-opacity-50 z-[6000] flex items-center justify-center">
         <div class="bg-gray-50 rounded-2xl shadow-2xl w-full max-w-lg mx-4 flex flex-col overflow-hidden">
@@ -856,7 +857,7 @@
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-1">Confirm Password</label>
-                            <input type="password" id="settingsConfirmPassword" placeholder="Repeat new password" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
+                            <input type="password" id="settingsConfirmPassword" placeholder="Repeat new password" class="w-full px-3 py-2 border border-gray-300 rounded-lgfocus:ring-2 focus:ring-blue-500 text-sm">
                         </div>
                         <button onclick="savePasswordSettings()" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-lg transition text-sm"><i class="fas fa-key mr-2"></i>Update Password</button>
                         <div id="passwordMsg" class="hidden text-sm text-center font-semibold rounded-lg py-2"></div>
@@ -964,7 +965,7 @@
                     </div>
                     <div class="p-2 border-b border-gray-100 flex gap-2">
                         <button onclick="showNewConversation()" class="flex-1 bg-blue-600 text-white text-xs font-semibold py-1.5 rounded-lg hover:bg-blue-700 transition flex items-center justify-center gap-1"><i class="fas fa-plus"></i> DM</button>
-                        <button onclick="showNewGroup()" class="flex-1 bg-purple-600 text-white text-xs font-semibold py-1.5 rounded-lg hover:bg-purple-700 transition flex items-center justify-center gap-1"><i class="fas fa-users"></i> Group</button>
+                        <button onclick="showNewGroup()" class="flex-1 bg-purple-600 text-white text-xs font-semibold py-1.5 rounded-lg hover:bg-purple-700 transition flexitems-center justify-center gap-1"><i class="fas fa-users"></i> Group</button>
                     </div>
                     <div id="conversationList" class="flex-1 overflow-y-auto"></div>
                 </div>
@@ -1026,7 +1027,7 @@
                             <div id="emojiPicker" class="hidden mb-2 p-2 border border-gray-200 rounded-xl bg-white shadow-md"><div class="flex flex-wrap gap-1 max-h-28 overflow-y-auto text-lg leading-none"></div></div>
                             <div class="flex gap-2 items-center">
                                 <button onclick="toggleEmojiPicker()" title="Emoji" class="text-gray-400 hover:text-yellow-500 transition text-lg flex-shrink-0">😊</button>
-                                <input type="text" id="internalChatInput" placeholder="Type a message..." class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" onkeydown="if(event.key==='Enter')sendChatMessage()">
+                                <input type="text" id="internalChatInput" placeholder="Type a message..." class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-smfocus:ring-2 focus:ring-blue-500 outline-none" onkeydown="if(event.key==='Enter')sendChatMessage()">
                                 <button onclick="toggleMsgInChatSearch()" title="Search messages" class="text-gray-400 hover:text-blue-500 transition flex-shrink-0"><i class="fas fa-search text-sm"></i></button>
                                 <button onclick="sendChatMessage()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition flex-shrink-0"><i class="fas fa-paper-plane"></i></button>
                             </div>
@@ -1386,7 +1387,7 @@
         async function loadResults() {
             document.getElementById('resultsSection').classList.remove('hidden');
             await Dashboard.init();
-            if ($.fn.DataTable.isDataTable('#sectorTable')) { Dashboard.refreshAll(); } 
+            if ($.fn.DataTable.isDataTable('#sectorTable')) { Dashboard.refreshAll(); }
             else { displaySectorData(); displayForecastData(); displayCongestionData(); autoSelectTopSite(); }
         }
 
@@ -1461,7 +1462,7 @@
                     { title: 'Mode', data: 'bau_nic', render: d => { if (!d) return '-'; return String(d).toLowerCase().includes('nic') ? `<span class="px-2 py-1 rounded bg-orange-100 text-orange-800 text-xs font-bold border border-orange-200">NIC</span>` : `<span class="px-2 py-1 rounded bg-gray-100 text-gray-800 text-xs font-bold border border-gray-200">BAU</span>`; } },
                     { title: 'Max Users', data: d => d.eric_max_rrc_user || d.max_active_user || 0, render: d => `<span class="${d>=120?'text-red-600 font-bold':''}">${d}</span>` },
                     { title: 'PRB Util (%)', data: 'eric_prb_util_rate', render: (d, t, r) => { if (d == null) return '-'; let thresh = (r.area_target || '').toLowerCase().includes('urban') ? 80.0 : 92.0; return parseFloat(d) >= thresh ? `<span class="text-red-600 font-bold" title="Exceeds ${thresh}% limit">${Number(d).toFixed(2)}</span>` : Number(d).toFixed(2); } },
-                    { title: 'DL Thpt (Mbps)', data: 'eric_dl_user_ip_thpt', render: (d, t, r) => { if (d == null) return '-'; let thresh = 3.0; const cat = (r.area_target || '').toLowerCase(); const mode = (r.bau_nic || '').toLowerCase(); if (cat.includes('urban') || cat.includes('kmc')) thresh = mode.includes('nic') ? 7.0 : 5.0; return parseFloat(d) < thresh ? `<span class="text-red-600 font-bold" title="Below ${thresh} Mbps limit">${Number(d).toFixed(2)}</span>` : Number(d).toFixed(2); } },
+                    { title: 'DL Thpt (Mbps)', data: 'eric_dl_user_ip_thpt', render: (d, t, r) => { if (d == null) return '-'; let thresh = 3.0; const cat = (r.area_target|| '').toLowerCase(); const mode = (r.bau_nic || '').toLowerCase(); if (cat.includes('urban') || cat.includes('kmc')) thresh = mode.includes('nic') ? 7.0 : 5.0; return parseFloat(d) < thresh ? `<span class="text-red-600 font-bold" title="Below ${thresh} Mbps limit">${Number(d).toFixed(2)}</span>` : Number(d).toFixed(2); } },
                     { title: 'Congested Weeks', data: 'congested_weeks' }
                 ], pageLength: 25
             });
@@ -1550,7 +1551,7 @@
             msgContainer.appendChild(thinkingDiv); msgContainer.scrollTop = msgContainer.scrollHeight;
             try {
                 const currentWeek = document.getElementById('globalFilterWeek') ? document.getElementById('globalFilterWeek').value : 40;
-                const response = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: message, week: parseInt(currentWeek) }) });
+                const response = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: message, week:parseInt(currentWeek) }) });
                 const data = await response.json();
                 document.getElementById('agentThinking').remove();
                 if (response.ok) appendAgentMessage(data.reply, 'ai');
@@ -1660,7 +1661,7 @@
             EMOJIS.forEach(e => { const btn = document.createElement('button'); btn.textContent = e; btn.className = 'hover:bg-gray-100 rounded p-0.5 cursor-pointer'; btn.onclick = () => insertEmoji(e); picker.appendChild(btn); });
         }
         function toggleEmojiPicker() { document.getElementById('emojiPicker').classList.toggle('hidden'); }
-        function insertEmoji(emoji) { const input = document.getElementById('internalChatInput'); const pos = input.selectionStart; input.value = input.value.slice(0, pos) + emoji + input.value.slice(pos); input.focus(); input.selectionStart = input.selectionEnd = pos + emoji.length; }
+        function insertEmoji(emoji) { const input = document.getElementById('internalChatInput'); const pos = input.selectionStart; input.value = input.value.slice(0, pos)+ emoji + input.value.slice(pos); input.focus(); input.selectionStart = input.selectionEnd = pos + emoji.length; }
         function filterConversations() {
             const q = document.getElementById('msgSearchInput').value.toLowerCase().trim(); const list = document.getElementById('conversationList'); list.innerHTML = '';
             const filtered = q ? allConversations.filter(c => { const name = (c.title || c.partner_name || '').toLowerCase(); const last = (c.last_message || '').toLowerCase(); return name.includes(q) || last.includes(q); }) : allConversations;
@@ -1673,7 +1674,7 @@
                 const displayName = c.title || c.partner_name; const isGroup = !!c.is_group; const div = document.createElement('div');
                 div.className = `p-3 cursor-pointer border-b border-gray-100 hover:bg-gray-50 transition ${c.id === currentConversationId ? 'bg-blue-50' : ''}`;
                 div.onclick = () => openConversation(c.id, displayName, isGroup);
-                div.innerHTML = `<div class="flex items-center justify-between"><p class="font-semibold text-sm text-gray-800 truncate flex items-center gap-1">${isGroup ? '<i class="fas fa-users text-purple-500 text-xs flex-shrink-0"></i>' : ''}${escapeHtml(displayName)}</p>${c.unread_count > 0 ? `<span class="bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 ml-1 flex-shrink-0">${c.unread_count}</span>` : ''}</div><p class="text-xs text-gray-500 truncate mt-0.5">${c.last_message ? escapeHtml(c.last_message) : ''}</p><p class="text-xs text-gray-400 mt-0.5">${c.last_time ? new Date(c.last_time).toLocaleString() : ''}</p>`;
+                div.innerHTML = `<div class="flex items-center justify-between"><p class="font-semibold text-sm text-gray-800 truncate flex items-center gap-1">${isGroup ?'<i class="fas fa-users text-purple-500 text-xs flex-shrink-0"></i>' : ''}${escapeHtml(displayName)}</p>${c.unread_count > 0 ? `<span class="bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 ml-1 flex-shrink-0">${c.unread_count}</span>` : ''}</div><p class="text-xs text-gray-500 truncate mt-0.5">${c.last_message ? escapeHtml(c.last_message) : ''}</p><p class="text-xs text-gray-400 mt-0.5">${c.last_time ? new Date(c.last_time).toLocaleString() : ''}</p>`;
                 list.appendChild(div);
             });
         }
@@ -1773,7 +1774,7 @@
         async function sendNewGroup() {
             const name = document.getElementById('newGroupName').value.trim(); const content = document.getElementById('newGroupMessage').value.trim(); const statusEl = document.getElementById('newGroupStatus'); const memberIds = [...document.querySelectorAll('.group-member-cb:checked')].map(cb => parseInt(cb.value));
             if (!name) { statusEl.textContent = 'Enter a group name.'; statusEl.className = 'mt-2 text-xs text-center font-semibold text-red-600'; statusEl.classList.remove('hidden'); return; }
-            if (memberIds.length === 0) { statusEl.textContent = 'Select at least one member.'; statusEl.className = 'mt-2 text-xs text-center font-semibold text-red-600'; statusEl.classList.remove('hidden'); return; }
+            if (memberIds.length === 0) { statusEl.textContent = 'Select at least one member.'; statusEl.className = 'mt-2 text-xs text-center font-semibold text-red-600';statusEl.classList.remove('hidden'); return; }
             if (!content) { statusEl.textContent = 'Write a first message.'; statusEl.className = 'mt-2 text-xs text-center font-semibold text-red-600'; statusEl.classList.remove('hidden'); return; }
             try {
                 const res = await fetch('/api/messages/group/new', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({title: name, member_ids: memberIds, content}) }); const data = await res.json();
@@ -2633,7 +2634,7 @@
         }
 
         function triggerZoom() { zoomToSite(document.getElementById('siteSearchInput').value); }
-        
+
         var mapInitialized = false;
         function initMapIfNeeded() {
             if (mapInitialized) {
@@ -3889,56 +3890,36 @@
         })();
 
         // ==========================================
-        // SUPERSET DASHBOARD EMBEDDING
+        // METABASE DASHBOARD EMBEDDING
         // ==========================================
-        
-        // 1. REPLACE WITH YOUR EC2 PUBLIC IP OR DOMAIN (Keep port 8088)
-        
-        const SUPERSET_DOMAIN = "http://qdt-ai.com:8088"; 
-        
-        // 2. REPLACE WITH YOUR EMBEDDED DASHBOARD UUID 
-        const SUPERSET_DASHBOARD_ID = "e8a5704f-7486-438c-a6ba-03e29a613041"; 
-        
-        async function openSupersetDashboard() {
-            document.getElementById('supersetModal').classList.remove('hidden');
-            const container = document.getElementById('supersetEmbedContainer');
-            
-            // Show a loading spinner
+
+        const METABASE_DASHBOARD_ID = 2;
+
+        async function openMetabaseDashboard() {
+            document.getElementById('metabaseModal').classList.remove('hidden');
+            const container = document.getElementById('metabaseEmbedContainer');
+
             container.innerHTML = '<div class="flex items-center justify-center h-full text-gray-500"><i class="fas fa-circle-notch fa-spin text-3xl mr-3"></i> Loading Analytics Engine...</div>';
-        
+
             try {
-                // Fetch the secure Guest Token from your Flask backend
-                const res = await fetch(`/api/superset/guest-token?dashboard_id=${SUPERSET_DASHBOARD_ID}`);
+                const res = await fetch(`/api/dashboard/embed?dashboard_id=${METABASE_DASHBOARD_ID}`);
                 const data = await res.json();
 
-                if (!res.ok || !data.token) {
-                    throw new Error(data.error || "Failed to fetch Superset token");
+                if (!res.ok || !data.iframeUrl) {
+                    throw new Error(data.error || "Failed to fetch Metabase URL");
                 }
-        
-                // Clear the loading spinner
-                container.innerHTML = '';
-        
-                // Inject the Dashboard using the official SDK
-                supersetEmbeddedSdk.embedDashboard({
-                    id: SUPERSET_DASHBOARD_ID,
-                    supersetDomain: SUPERSET_DOMAIN,
-                    mountPoint: container,
-                    fetchGuestToken: () => data.token,
-                    dashboardUiConfig: {
-                        hideTitle: true,
-                        hideChartControls: false,
-                        hideTab: false,
-                    }
-                });
+
+                container.innerHTML = `<iframe src="${data.iframeUrl}" frameborder="0" width="100%" height="100%" allowtransparency></iframe>`;
+
             } catch (err) {
                 console.error("Dashboard Embed Error:", err);
                 container.innerHTML = `<div class="flex items-center justify-center h-full text-red-500 font-bold"><i class="fas fa-exclamation-triangle mr-2"></i> Error loading dashboard: ${err.message}</div>`;
             }
         }
 
-        function closeSupersetDashboard() {
-            document.getElementById('supersetModal').classList.add('hidden');
-            document.getElementById('supersetEmbedContainer').innerHTML = ''; // Clean up iframe memory
+        function closeMetabaseDashboard() {
+            document.getElementById('metabaseModal').classList.add('hidden');
+            document.getElementById('metabaseEmbedContainer').innerHTML = '';
         }
 
 
