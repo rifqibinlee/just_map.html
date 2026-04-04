@@ -33,6 +33,10 @@
 
   <script src="https://unpkg.com/@superset-ui/embedded-sdk"></script>
 
+  <!-- CesiumJS for 3D Map -->
+  <link rel="stylesheet" href="https://cesium.com/downloads/cesiumjs/releases/1.122/Build/Cesium/Widgets/widgets.css">
+  <script src="https://cesium.com/downloads/cesiumjs/releases/1.122/Build/Cesium/Cesium.js"></script>
+
     <style>
         .table-container { overflow-x: auto; }
         .dt-buttons { display: none !important; }
@@ -311,6 +315,26 @@
             <button id="tabBtnMap" onclick="switchMainTab('map')" class="text-white opacity-70 hover:opacity-100 font-bold border-b-2 border-transparent hover:border-whitepb-1 transition-all">
                 <i class="fas fa-map-marked-alt mr-1"></i> Coverage Map
             </button>
+            <button id="tabBtn3D" onclick="switchMainTab('3d')" class="text-white opacity-70 hover:opacity-100 font-bold border-b-2 border-transparent hover:border-white pb-1 transition-all">
+                <i class="fas fa-cube mr-1"></i> 3D Map
+            </button>
+
+            <!-- Tools dropdown -->
+            <div class="relative" id="toolsDropdownWrapper">
+                <button id="tabBtnTools" onclick="toggleToolsDropdown()" class="text-white opacity-70 hover:opacity-100 font-bold border-b-2 border-transparent hover:border-white pb-1 transition-all flex items-center gap-1">
+                    <i class="fas fa-toolbox mr-1"></i> Tools <i class="fas fa-chevron-down text-[10px] ml-1"></i>
+                </button>
+                <div id="toolsDropdown" class="hidden absolute left-1/2 -translate-x-1/2 mt-3 w-64 bg-white rounded-xl shadow-2xl overflow-hidden text-gray-700 border border-gray-100 z-[9999]">
+                    <button onclick="switchMainTab('cctv')" class="w-full text-left px-4 py-3 hover:bg-blue-50 flex items-center gap-3 border-b border-gray-100 transition-colors">
+                        <div class="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center"><i class="fas fa-video text-blue-600 text-sm"></i></div>
+                        <div><div class="font-bold text-sm text-gray-800">CCTV Planning</div><div class="text-[11px] text-gray-400">Site coverage & camera placement</div></div>
+                    </button>
+                    <button onclick="switchMainTab('bitcoin')" class="w-full text-left px-4 py-3 hover:bg-amber-50 flex items-center gap-3 transition-colors">
+                        <div class="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center"><i class="fab fa-bitcoin text-amber-600 text-sm"></i></div>
+                        <div><div class="font-bold text-sm text-gray-800">Illegal Bitcoin Mining</div><div class="text-[11px] text-gray-400">Anomaly detection candidates</div></div>
+                    </button>
+                </div>
+            </div>
         </div>
 
         <div class="flex items-center gap-3">
@@ -777,6 +801,163 @@
     </div>
 
     </div><!-- /#mapContainer -->
+
+    <!-- 3D Map Container (CesiumJS) -->
+    <div id="map3dContainer" style="display:none; position:absolute; top:72px; bottom:0; left:0; right:0; overflow:hidden;">
+        <div id="cesiumContainer" style="width:100%; height:100%;"></div>
+
+        <!-- Loading / Status overlay -->
+        <div id="cesium3dStatus" style="position:absolute; bottom:24px; left:50%; transform:translateX(-50%); z-index:100; background:rgba(15,23,42,0.9); color:white; padding:10px 24px; border-radius:10px; font-size:0.85rem; font-weight:600; display:flex; align-items:center; gap:10px; box-shadow:0 4px 20px rgba(0,0,0,0.3); pointer-events:none; transition: opacity 0.5s;">
+            <i class="fas fa-circle-notch fa-spin" id="cesiumStatusSpinner"></i>
+            <span id="cesiumStatusText">Initializing 3D viewer…</span>
+        </div>
+
+        <!-- Load Cell Sites button -->
+        <button id="cesiumLoadSitesBtn" onclick="toggleCesiumSites()" style="display:none; position:absolute; top:16px; left:16px; z-index:100; background:#1d4ed8; color:white; border:none; padding:10px 20px; border-radius:10px; font-size:0.85rem; font-weight:700; cursor:pointer; align-items:center; gap:8px; box-shadow:0 4px 20px rgba(0,0,0,0.25); transition: all 0.2s;"
+            onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 24px rgba(0,0,0,0.3)'"
+            onmouseout="this.style.transform=''; this.style.boxShadow='0 4px 20px rgba(0,0,0,0.25)'">
+            <i class="fas fa-broadcast-tower"></i> Load Cell Sites
+        </button>
+
+        <!-- Search bar (hidden until sites are loaded) -->
+        <div id="cesiumSearchBar" style="display:none; position:absolute; top:16px; left:50%; transform:translateX(-50%); z-index:100; width:380px;">
+            <div style="position:relative;">
+                <i class="fas fa-search" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#94a3b8; font-size:0.85rem;"></i>
+                <input id="cesiumSearchInput" type="text" placeholder="Search site ID or name…"
+                    style="width:100%; padding:10px 14px 10px 36px; border:none; border-radius:10px; font-size:0.85rem; background:rgba(255,255,255,0.95); box-shadow:0 4px 20px rgba(0,0,0,0.25); outline:none; color:#1e293b; font-weight:500;"
+                    oninput="onCesiumSearch(this.value)" autocomplete="off" />
+                <div id="cesiumSearchResults" style="position:absolute; top:100%; left:0; right:0; background:white; border-radius:0 0 10px 10px; max-height:240px; overflow-y:auto; box-shadow:0 10px 25px rgba(0,0,0,0.2); display:none; z-index:101;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CCTV Planning Tool -->
+    <div id="cctvContainer" style="display:none; position:absolute; top:72px; bottom:0; left:0; right:0; overflow:hidden;">
+        <!-- CCTV Status bar -->
+        <div id="cctvStatus" style="position:absolute; bottom:24px; left:50%; transform:translateX(-50%); z-index:200; background:rgba(15,23,42,0.9); color:white; padding:10px 24px; border-radius:10px; font-size:0.85rem; font-weight:600; display:flex; align-items:center; gap:10px; box-shadow:0 4px 20px rgba(0,0,0,0.3); pointer-events:none; transition: opacity 0.5s;">
+            <i class="fas fa-circle-notch fa-spin" id="cctvStatusSpinner"></i>
+            <span id="cctvStatusText">Loading CCTV Planning tool…</span>
+        </div>
+
+        <!-- CCTV Sidebar -->
+        <div id="cctvSidebar" style="position:absolute; top:0; left:0; bottom:0; width:360px; background:#fff; z-index:150; border-right:1px solid #e5e7eb; box-shadow:2px 0 15px rgba(0,0,0,0.08); display:flex; flex-direction:column; overflow-y:auto;">
+            <!-- Header -->
+            <div style="background:linear-gradient(135deg,#1e3a8a,#2563eb); color:white; padding:16px; flex-shrink:0;">
+                <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+                    <i class="fas fa-video" style="font-size:1.2rem;"></i>
+                    <h2 style="font-size:1.1rem; font-weight:800; margin:0;">CCTV Planning Tool</h2>
+                </div>
+                <p style="font-size:0.72rem; color:#bfdbfe; margin:0;">Draw an AOI, upload building & pole data, then generate optimal CCTV placement candidates.</p>
+            </div>
+
+            <div style="padding:16px; display:flex; flex-direction:column; gap:14px; flex:1;">
+                <!-- Search -->
+                <div style="position:relative;">
+                    <label style="font-size:0.68rem; font-weight:700; color:#4b5563; text-transform:uppercase; display:block; margin-bottom:4px;">Search Sites</label>
+                    <div style="position:relative;">
+                        <i class="fas fa-search" style="position:absolute; left:10px; top:50%; transform:translateY(-50%); color:#94a3b8; font-size:0.8rem;"></i>
+                        <input id="cctvSearchInput" type="text" placeholder="Site ID or name…"
+                            style="width:100%; padding:8px 12px 8px 32px; border:1px solid #d1d5db; border-radius:6px; font-size:0.82rem; outline:none; box-sizing:border-box;"
+                            oninput="onCctvSearch(this.value)" autocomplete="off" />
+                        <div id="cctvSearchResults" style="position:absolute; top:100%; left:0; right:0; background:white; border-radius:0 0 8px 8px; max-height:200px; overflow-y:auto; box-shadow:0 10px 25px rgba(0,0,0,0.15); display:none; z-index:201; border:1px solid #e5e7eb;"></div>
+                    </div>
+                </div>
+
+                <!-- Step 1: Define AOI -->
+                <div style="background:#f0f9ff; padding:12px; border-radius:8px; border:1px solid #bae6fd;">
+                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                        <span style="background:#2563eb; color:white; width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.7rem; font-weight:800;">1</span>
+                        <span style="font-size:0.78rem; font-weight:700; color:#1e3a8a;">Define Area of Interest</span>
+                    </div>
+                    <p style="font-size:0.7rem; color:#64748b; margin:0 0 8px 0;">Draw a polygon on the map to define the surveillance area. Buildings and poles within this area will be used.</p>
+                    <button id="cctvDrawAoiBtn" onclick="cctvStartDrawAOI()" style="width:100%; padding:8px; background:#2563eb; color:white; border:none; border-radius:6px; font-size:0.78rem; font-weight:700; cursor:pointer;">
+                        <i class="fas fa-draw-polygon mr-1"></i> Draw AOI on Map
+                    </button>
+                    <div id="cctvAoiInfo" style="display:none; margin-top:8px; font-size:0.72rem; color:#059669; font-weight:600;">
+                        <i class="fas fa-check-circle"></i> <span id="cctvAoiInfoText">AOI defined</span>
+                    </div>
+                </div>
+
+                <!-- Step 2: Configure Parameters -->
+                <div style="background:#f8fafc; padding:12px; border-radius:8px; border:1px solid #e2e8f0;">
+                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+                        <span style="background:#7c3aed; color:white; width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.7rem; font-weight:800;">2</span>
+                        <span style="font-size:0.78rem; font-weight:700; color:#4c1d95;">Camera & Grid Settings</span>
+                    </div>
+
+                    <label style="font-size:0.68rem; font-weight:700; color:#4b5563; display:block; margin-bottom:3px;">Hex Grid Spacing (m)</label>
+                    <input id="cctvHexSpacing" type="number" value="60" min="10" max="500" step="10"
+                        style="width:100%; padding:6px 10px; border:1px solid #d1d5db; border-radius:5px; font-size:0.8rem; margin-bottom:8px; box-sizing:border-box;" />
+
+                    <label style="font-size:0.68rem; font-weight:700; color:#4b5563; display:block; margin-bottom:3px;">AOI Buffer Distance (m)</label>
+                    <input id="cctvBufferDist" type="number" value="30" min="5" max="200" step="5"
+                        style="width:100%; padding:6px 10px; border:1px solid #d1d5db; border-radius:5px; font-size:0.8rem; margin-bottom:8px; box-sizing:border-box;" />
+
+                    <label style="font-size:0.68rem; font-weight:700; color:#4b5563; display:block; margin-bottom:3px;">Azimuth Offsets (°)</label>
+                    <input id="cctvOffsets" type="text" value="0, 120, 240" placeholder="e.g. 0, 120, 240"
+                        style="width:100%; padding:6px 10px; border:1px solid #d1d5db; border-radius:5px; font-size:0.8rem; margin-bottom:8px; box-sizing:border-box;" />
+
+                    <label style="font-size:0.68rem; font-weight:700; color:#4b5563; display:block; margin-bottom:3px;">Camera Type</label>
+                    <select id="cctvCamType" style="width:100%; padding:6px 10px; border:1px solid #d1d5db; border-radius:5px; font-size:0.8rem; margin-bottom:8px; box-sizing:border-box;">
+                        <option value="TypeA" data-hfov="90" data-range="30" data-price="2500">Type A — 90° FOV, 30m range (RM 2,500)</option>
+                        <option value="TypeB" data-hfov="60" data-range="50" data-price="4500">Type B — 60° FOV, 50m range (RM 4,500)</option>
+                        <option value="TypeC" data-hfov="30" data-range="100" data-price="8000">Type C — 30° FOV, 100m range (RM 8,000)</option>
+                    </select>
+                </div>
+
+                <!-- Step 3: Run -->
+                <div style="background:#f0fdf4; padding:12px; border-radius:8px; border:1px solid #bbf7d0;">
+                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                        <span style="background:#16a34a; color:white; width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.7rem; font-weight:800;">3</span>
+                        <span style="font-size:0.78rem; font-weight:700; color:#14532d;">Generate CCTV Plan</span>
+                    </div>
+                    <button id="cctvRunBtn" onclick="cctvRunPipeline()" style="width:100%; padding:10px; background:#16a34a; color:white; border:none; border-radius:6px; font-size:0.85rem; font-weight:700; cursor:pointer;">
+                        <i class="fas fa-play mr-1"></i> Run CCTV Pipeline
+                    </button>
+                </div>
+
+                <!-- Results Summary -->
+                <div id="cctvResultsPanel" style="display:none; background:#fffbeb; padding:12px; border-radius:8px; border:1px solid #fde68a;">
+                    <div style="font-size:0.78rem; font-weight:700; color:#92400e; margin-bottom:8px;"><i class="fas fa-poll mr-1"></i> Results Summary</div>
+                    <div id="cctvResultsContent" style="font-size:0.75rem; color:#78716c;"></div>
+                    <button onclick="cctvClearResults()" style="margin-top:10px; width:100%; padding:7px; background:#dc2626; color:white; border:none; border-radius:6px; font-size:0.75rem; font-weight:700; cursor:pointer;">
+                        <i class="fas fa-trash mr-1"></i> Clear Results
+                    </button>
+                </div>
+
+                <!-- Legend -->
+                <div style="background:#f8fafc; padding:10px; border-radius:8px; border:1px solid #e2e8f0; margin-top:auto;">
+                    <div style="font-size:0.68rem; font-weight:700; color:#4b5563; text-transform:uppercase; margin-bottom:6px;">Legend</div>
+                    <div style="display:flex; flex-direction:column; gap:4px; font-size:0.72rem; color:#64748b;">
+                        <div style="display:flex; align-items:center; gap:6px;"><div style="width:10px; height:10px; border-radius:50%; background:#2563eb; border:1.5px solid white; box-shadow:0 1px 3px rgba(0,0,0,0.2);"></div> Cell Site</div>
+                        <div style="display:flex; align-items:center; gap:6px;"><div style="width:10px; height:10px; background:#ef4444; border:1.5px solid white; box-shadow:0 1px 3px rgba(0,0,0,0.2);"></div> Building Candidate</div>
+                        <div style="display:flex; align-items:center; gap:6px;"><div style="width:10px; height:10px; background:#f59e0b; border-radius:2px; border:1.5px solid white; box-shadow:0 1px 3px rgba(0,0,0,0.2);"></div> Pole Candidate</div>
+                        <div style="display:flex; align-items:center; gap:6px;"><div style="width:14px; height:8px; background:rgba(59,130,246,0.25); border:1px solid #3b82f6; border-radius:2px;"></div> Camera FOV Wedge</div>
+                        <div style="display:flex; align-items:center; gap:6px;"><div style="width:14px; height:8px; background:rgba(168,85,247,0.15); border:1px dashed #a855f7; border-radius:2px;"></div> Hex Grid</div>
+                        <div style="display:flex; align-items:center; gap:6px;"><div style="width:14px; height:8px; background:rgba(34,197,94,0.15); border:1px solid #22c55e; border-radius:2px;"></div> AOI Buffer</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CCTV Map -->
+        <div id="cctvMap" style="position:absolute; top:0; left:360px; right:0; bottom:0;"></div>
+    </div>
+
+    <!-- Illegal Bitcoin Mining Tool (Placeholder) -->
+    <div id="bitcoinContainer" style="display:none; position:absolute; top:72px; bottom:0; left:0; right:0; overflow:hidden; background:#f8fafc;">
+        <div style="display:flex; align-items:center; justify-content:center; height:100%; flex-direction:column; gap:20px;">
+            <div style="width:100px; height:100px; border-radius:24px; background:linear-gradient(135deg, #f59e0b, #d97706); display:flex; align-items:center; justify-content:center; box-shadow:0 8px 30px rgba(217,119,6,0.3);">
+                <i class="fab fa-bitcoin" style="font-size:3rem; color:white;"></i>
+            </div>
+            <h2 style="font-size:1.5rem; font-weight:800; color:#1e293b;">Illegal Bitcoin Mining Detection</h2>
+            <p style="color:#64748b; font-size:0.95rem; max-width:450px; text-align:center; line-height:1.6;">This tool identifies anomalous energy consumption patterns that may indicate unauthorized cryptocurrency mining operations at cell sites.</p>
+            <div style="background:#fef3c7; border:1px solid #fde68a; border-radius:10px; padding:14px 24px; display:flex; align-items:center; gap:10px;">
+                <i class="fas fa-hard-hat" style="color:#d97706; font-size:1.1rem;"></i>
+                <span style="color:#92400e; font-weight:600; font-size:0.85rem;">Under Development — Coming Soon</span>
+            </div>
+        </div>
+    </div>
 
 <div id="plotModalOverlay" class="plot-modal-overlay">
         <div class="plot-modal">
@@ -1280,40 +1461,84 @@
         function switchMainTab(tab) {
             const dashboardView = document.getElementById('dashboardView');
             const mapContainer = document.getElementById('mapContainer');
+            const map3dContainer = document.getElementById('map3dContainer');
+            const cctvContainer = document.getElementById('cctvContainer');
+            const bitcoinContainer = document.getElementById('bitcoinContainer');
             const dashboardChat = document.getElementById('chatWidget');
             const mapChatBtn = document.getElementById('mapChatToggleBtn');
             const mapChatPnl = document.getElementById('mapChatPanel');
 
+            const inactiveClass = 'text-white opacity-70 hover:opacity-100 font-bold border-b-2 border-transparent hover:border-white pb-1 transition-all';
+            const activeClass = 'text-white font-bold border-b-2 border-white pb-1 transition-all';
+
+            // Hide all views
+            if (dashboardView) dashboardView.style.display = 'none';
+            if (mapContainer) mapContainer.style.display = 'none';
+            if (map3dContainer) map3dContainer.style.display = 'none';
+            if (cctvContainer) cctvContainer.style.display = 'none';
+            if (bitcoinContainer) bitcoinContainer.style.display = 'none';
+
+            // Reset all tab buttons
+            document.getElementById('tabBtnDashboard').className = inactiveClass;
+            document.getElementById('tabBtnMap').className = inactiveClass;
+            document.getElementById('tabBtn3D').className = inactiveClass;
+            // Reset tools button
+            const toolsBtn = document.getElementById('tabBtnTools');
+            toolsBtn.className = toolsBtn.className.replace('border-white', 'border-transparent').replace(/(?<!\-)opacity-100/g, 'opacity-70');
+
+            // Hide chats for all non-map tabs
+            if (dashboardChat) dashboardChat.style.display = 'none';
+            if (mapChatBtn) mapChatBtn.style.display = 'none';
+            if (mapChatPnl) { mapChatPnl.classList.add('hidden'); mapChatPnl.classList.remove('flex'); }
+
+            // Close tools dropdown
+            const dd = document.getElementById('toolsDropdown');
+            if (dd) dd.classList.add('hidden');
+
             if (tab === 'dashboard') {
-                if (mapContainer) mapContainer.style.display = 'none';
                 if (dashboardView) dashboardView.style.display = 'block';
-                // Show dashboard chat, hide map chat
                 if (dashboardChat) dashboardChat.style.display = '';
-                if (mapChatBtn) mapChatBtn.style.display = 'none';
-                if (mapChatPnl) { mapChatPnl.classList.add('hidden'); mapChatPnl.classList.remove('flex'); }
+                document.getElementById('tabBtnDashboard').className = activeClass;
+                setTimeout(() => { if (window.dispatchEvent) window.dispatchEvent(new Event('resize')); }, 100);
 
-                document.getElementById('tabBtnDashboard').className = 'text-white font-bold border-b-2 border-white pb-1 transition-all';
-                document.getElementById('tabBtnMap').className = 'text-white opacity-70 hover:opacity-100 font-bold border-b-2 border-transparent hover:border-white pb-1 transition-all';
-
-                setTimeout(() => {
-                    if (window.dispatchEvent) window.dispatchEvent(new Event('resize'));
-                }, 100);
-            } else {
-                if (dashboardView) dashboardView.style.display = 'none';
+            } else if (tab === 'map') {
                 if (mapContainer) mapContainer.style.display = 'block';
-                // Hide dashboard chat, show map chat
-                if (dashboardChat) dashboardChat.style.display = 'none';
                 if (mapChatBtn) mapChatBtn.style.display = '';
+                document.getElementById('tabBtnMap').className = activeClass;
+                setTimeout(() => { if (typeof initMapIfNeeded === 'function') initMapIfNeeded(); }, 200);
 
-                document.getElementById('tabBtnDashboard').className = 'text-white opacity-70 hover:opacity-100 font-bold border-b-2 border-transparent hover:border-white pb-1 transition-all';
-                document.getElementById('tabBtnMap').className = 'text-white font-bold border-b-2 border-white pb-1 transition-all';
+            } else if (tab === '3d') {
+                if (map3dContainer) map3dContainer.style.display = 'block';
+                document.getElementById('tabBtn3D').className = activeClass;
+                setTimeout(() => { if (typeof initCesiumIfNeeded === 'function') initCesiumIfNeeded(); }, 200);
 
-                // Initialize map on first visit, or just resize
-                setTimeout(() => {
-                    if (typeof initMapIfNeeded === 'function') initMapIfNeeded();
-                }, 200);
+            } else if (tab === 'cctv') {
+                if (cctvContainer) cctvContainer.style.display = 'block';
+                // Highlight tools button
+                toolsBtn.classList.remove('opacity-70', 'border-transparent');
+                toolsBtn.classList.add('opacity-100', 'border-white');
+                setTimeout(() => { if (typeof initCctvMap === 'function') initCctvMap(); }, 200);
+
+            } else if (tab === 'bitcoin') {
+                if (bitcoinContainer) bitcoinContainer.style.display = 'block';
+                toolsBtn.classList.remove('opacity-70', 'border-transparent');
+                toolsBtn.classList.add('opacity-100', 'border-white');
             }
         }
+
+        function toggleToolsDropdown() {
+            const dd = document.getElementById('toolsDropdown');
+            dd.classList.toggle('hidden');
+        }
+
+        // Close tools dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            const wrapper = document.getElementById('toolsDropdownWrapper');
+            const dd = document.getElementById('toolsDropdown');
+            if (wrapper && dd && !wrapper.contains(e.target)) {
+                dd.classList.add('hidden');
+            }
+        });
 
     // --- DASHBOARD CONTROLLER & DATA LOGIC ---
         const Dashboard = {
@@ -3929,6 +4154,425 @@
         })();
 
         // ==========================================
+        // CCTV PLANNING MAP + PIPELINE
+        // ==========================================
+        let cctvMap = null;
+        let cctvInitialized = false;
+        let cctvSiteDataCache = [];
+        let cctvDrawControl = null;
+        let cctvAoiLayer = null;           // the drawn AOI polygon
+        let cctvResultLayers = L.layerGroup();  // all pipeline output layers
+        let cctvCoverageGroup = null;
+        let cctvSiteMarkers = null;
+        let cctvIsDrawing = false;
+
+        function setCctvStatus(msg, icon, autohide) {
+            const el = document.getElementById('cctvStatus');
+            const txt = document.getElementById('cctvStatusText');
+            const spin = document.getElementById('cctvStatusSpinner');
+            if (!el) return;
+            txt.textContent = msg;
+            spin.className = icon || 'fas fa-circle-notch fa-spin';
+            el.style.opacity = '1';
+            if (autohide) setTimeout(() => { el.style.opacity = '0'; }, autohide);
+        }
+
+        async function initCctvMap() {
+            if (cctvInitialized) { cctvMap.invalidateSize(); return; }
+            cctvInitialized = true;
+            setCctvStatus('Initializing map…', 'fas fa-circle-notch fa-spin');
+
+            cctvMap = L.map('cctvMap', { center: [3.1390, 101.6869], zoom: 12, zoomControl: true });
+            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '&copy; Esri', maxZoom: 19 }).addTo(cctvMap);
+            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, opacity: 0.7 }).addTo(cctvMap);
+
+            cctvCoverageGroup = L.layerGroup().addTo(cctvMap);
+            cctvResultLayers = L.layerGroup().addTo(cctvMap);
+
+            // Leaflet.draw for AOI
+            const drawnItems = new L.FeatureGroup().addTo(cctvMap);
+            cctvMap.on(L.Draw.Event.CREATED, function(e) {
+                drawnItems.clearLayers();
+                cctvAoiLayer = e.layer;
+                drawnItems.addLayer(cctvAoiLayer);
+                cctvAoiLayer.setStyle({ color: '#22c55e', weight: 2, fillColor: '#22c55e', fillOpacity: 0.1, dashArray: '6,4' });
+                document.getElementById('cctvAoiInfo').style.display = 'block';
+                const bounds = cctvAoiLayer.getBounds();
+                const areaSqM = L.GeometryUtil ? 0 : 0; // approximate
+                document.getElementById('cctvAoiInfoText').textContent = 'AOI defined — ' + cctvAoiLayer.getLatLngs()[0].length + ' vertices';
+                cctvIsDrawing = false;
+                document.getElementById('cctvDrawAoiBtn').innerHTML = '<i class="fas fa-draw-polygon mr-1"></i> Redraw AOI';
+                setCctvStatus('AOI drawn successfully', 'fas fa-check-circle', 3000);
+            });
+
+            // Fetch & render sites
+            setCctvStatus('Fetching site data…', 'fas fa-database fa-beat-fade');
+            try {
+                let data;
+                if (siteDataCache && siteDataCache.length > 0) {
+                    data = siteDataCache;
+                } else {
+                    const params = new URLSearchParams();
+                    const weekSel = document.getElementById('weekSelect');
+                    const regionSel = document.getElementById('regionSelect');
+                    if (weekSel && weekSel.value && weekSel.value !== 'All') params.set('week', weekSel.value);
+                    if (regionSel && regionSel.value && regionSel.value !== 'All') params.set('region', regionSel.value);
+                    const resp = await fetch('/api/sites?' + params.toString());
+                    data = await resp.json();
+                    if (!Array.isArray(data)) data = [];
+                }
+                cctvSiteDataCache = data.filter(s => s && s.site_id && !isNaN(parseFloat(s.lat)) && !isNaN(parseFloat(s.lng)) && (parseFloat(s.lat) !== 0 || parseFloat(s.lng) !== 0));
+                cctvSiteDataCache.forEach(s => { s.lat = parseFloat(s.lat); s.lng = parseFloat(s.lng); });
+
+                setCctvStatus('Rendering ' + cctvSiteDataCache.length + ' sites…', 'fas fa-broadcast-tower fa-beat-fade');
+                await new Promise(r => setTimeout(r, 50));
+
+                cctvSiteMarkers = L.markerClusterGroup({ disableClusteringAtZoom: 14, maxClusterRadius: 50 });
+                cctvSiteDataCache.forEach(site => {
+                    const icon = L.divIcon({ className: 'custom-pin', html: '<div style="background:#2563eb; width:12px; height:12px; border-radius:50%; border:2px solid white; box-shadow:0 2px 5px rgba(0,0,0,0.3);"></div>', iconSize: [12, 12] });
+                    const popup = '<div style="padding:8px; min-width:180px;"><div style="font-weight:800; color:#1e3a8a;">' + site.site_id + '</div><div style="font-size:0.75rem; color:#64748b;">' + (site.site_name||'') + '</div></div>';
+                    cctvSiteMarkers.addLayer(L.marker([site.lat, site.lng], { icon }).bindPopup(popup));
+
+                    // Draw coverage
+                    if (site.coverage) {
+                        const azGroups = {};
+                        site.coverage.forEach(sec => { const a = parseFloat(sec.az); if (!azGroups[a]) azGroups[a] = {}; azGroups[a][sec.tech] = sec; });
+                        Object.entries(azGroups).forEach(([azStr, techs]) => {
+                            const az = parseFloat(azStr);
+                            const maxRad = Math.max(...Object.values(techs).map(t => t.rad || 1000));
+                            const cfg = [{ tech:'5G',i:0,o:0.25,c:'#eab308'},{tech:'4G',i:0.25,o:0.50,c:'#3b82f6'},{tech:'3G',i:0.50,o:0.75,c:'#f97316'},{tech:'2G',i:0.75,o:1.0,c:'#6b7280'}];
+                            cfg.forEach(x => {
+                                if (techs[x.tech]) {
+                                    const bw = techs[x.tech].bw || 65;
+                                    const pts = cctvAnnulusSector(site.lat, site.lng, az, maxRad*x.i, maxRad*x.o, bw);
+                                    L.polygon(pts, { color: x.c, weight: 1, fillOpacity: 0.3 }).addTo(cctvCoverageGroup);
+                                }
+                            });
+                        });
+                    }
+                });
+                cctvMap.addLayer(cctvSiteMarkers);
+
+                if (cctvSiteDataCache.length > 0) {
+                    const lats = cctvSiteDataCache.map(s => s.lat), lngs = cctvSiteDataCache.map(s => s.lng);
+                    cctvMap.fitBounds([[Math.min(...lats), Math.min(...lngs)], [Math.max(...lats), Math.max(...lngs)]], { padding: [40, 40] });
+                }
+                setCctvStatus(cctvSiteDataCache.length + ' sites loaded', 'fas fa-check-circle', 4000);
+            } catch (err) {
+                console.error('CCTV map init error:', err);
+                setCctvStatus('Failed to load sites: ' + err.message, 'fas fa-times-circle');
+            }
+        }
+
+        function cctvAnnulusSector(lat, lng, azimuth, innerR, outerR, bw) {
+            const R = 6378137, startA = (azimuth - bw/2) * Math.PI/180, endA = (azimuth + bw/2) * Math.PI/180;
+            const latR = lat * Math.PI/180, lngR = lng * Math.PI/180, pts = [], steps = 24;
+            for (let i = 0; i <= steps; i++) { const a = startA + (endA-startA)*(i/steps); pts.push([(latR + (outerR/R)*Math.cos(a))*180/Math.PI, (lngR + (outerR/R)*Math.sin(a)/Math.cos(latR))*180/Math.PI]); }
+            for (let i = steps; i >= 0; i--) { const a = startA + (endA-startA)*(i/steps); pts.push([(latR + (innerR/R)*Math.cos(a))*180/Math.PI, (lngR + (innerR/R)*Math.sin(a)/Math.cos(latR))*180/Math.PI]); }
+            return pts;
+        }
+
+        // ── AOI Drawing ──
+        function cctvStartDrawAOI() {
+            if (!cctvMap) return;
+            if (cctvIsDrawing) return;
+            cctvIsDrawing = true;
+            const drawer = new L.Draw.Polygon(cctvMap, { shapeOptions: { color: '#22c55e', weight: 2, fillOpacity: 0.1 } });
+            drawer.enable();
+            setCctvStatus('Click on the map to draw AOI polygon. Double-click to finish.', 'fas fa-draw-polygon');
+        }
+
+        // ── CCTV Pipeline (client-side implementation of cctv2.py) ──
+        async function cctvRunPipeline() {
+            if (!cctvAoiLayer) { alert('Please draw an AOI first (Step 1).'); return; }
+            if (!cctvMap) return;
+
+            const runBtn = document.getElementById('cctvRunBtn');
+            runBtn.disabled = true;
+            runBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-1"></i> Processing…';
+            cctvResultLayers.clearLayers();
+
+            try {
+                setCctvStatus('Step 1/8: Computing AOI buffer…', 'fas fa-vector-square fa-beat-fade');
+                await new Promise(r => setTimeout(r, 80));
+
+                const aoiLatLngs = cctvAoiLayer.getLatLngs()[0];
+                const bufferDist = parseFloat(document.getElementById('cctvBufferDist').value) || 30;
+                const hexSpacing = parseFloat(document.getElementById('cctvHexSpacing').value) || 60;
+                const offsetsStr = document.getElementById('cctvOffsets').value || '0, 120, 240';
+                const offsets = offsetsStr.split(',').map(s => parseFloat(s.trim())).filter(n => !isNaN(n));
+
+                const camSelect = document.getElementById('cctvCamType');
+                const camOpt = camSelect.options[camSelect.selectedIndex];
+                const camSpec = {
+                    type: camOpt.value,
+                    hfov: parseFloat(camOpt.dataset.hfov),
+                    range: parseFloat(camOpt.dataset.range),
+                    price: parseFloat(camOpt.dataset.price)
+                };
+
+                // Buffer the AOI
+                const bufferedPts = bufferPolygon(aoiLatLngs, bufferDist);
+                const aoiBufferPoly = L.polygon(bufferedPts, { color: '#22c55e', weight: 1.5, fillColor: '#22c55e', fillOpacity: 0.08, dashArray: '4,4' });
+                cctvResultLayers.addLayer(aoiBufferPoly);
+
+                // Step 2: Generate hex grid inside buffered AOI
+                setCctvStatus('Step 2/8: Generating hex grid…', 'fas fa-th fa-beat-fade');
+                await new Promise(r => setTimeout(r, 80));
+
+                const bounds = aoiBufferPoly.getBounds();
+                const hexCentroids = generateHexGrid(bounds, hexSpacing, bufferedPts);
+
+                // Draw hex grid
+                hexCentroids.forEach(c => {
+                    const hexPoly = createHexagon(c.lat, c.lng, hexSpacing / 2);
+                    L.polygon(hexPoly, { color: '#a855f7', weight: 0.8, fillColor: '#a855f7', fillOpacity: 0.06, dashArray: '3,3' }).addTo(cctvResultLayers);
+                });
+
+                // Step 3: Extract building corners (simulated: use site positions within AOI as building candidates)
+                setCctvStatus('Step 3/8: Extracting building candidates…', 'fas fa-building fa-beat-fade');
+                await new Promise(r => setTimeout(r, 80));
+
+                // Use the AOI polygon vertices as building edge candidates (simulating extract vertices from buildings)
+                const buildingCandidates = [];
+                // Also use any cell site positions within the buffered AOI as pole candidates
+                const poleCandidates = [];
+                cctvSiteDataCache.forEach(site => {
+                    if (isPointInPolygon([site.lat, site.lng], bufferedPts)) {
+                        poleCandidates.push({ lat: site.lat, lng: site.lng, type: 'pole', source: site.site_id });
+                    }
+                });
+
+                // Generate pseudo-building candidates: sample points along AOI edges
+                for (let i = 0; i < aoiLatLngs.length; i++) {
+                    const p1 = aoiLatLngs[i];
+                    const p2 = aoiLatLngs[(i + 1) % aoiLatLngs.length];
+                    buildingCandidates.push({ lat: p1.lat, lng: p1.lng, type: 'building', source: 'vertex_' + i });
+                    // Midpoints for denser coverage
+                    buildingCandidates.push({ lat: (p1.lat + p2.lat) / 2, lng: (p1.lng + p2.lng) / 2, type: 'building', source: 'mid_' + i });
+                }
+
+                const allCandidates = [...buildingCandidates, ...poleCandidates];
+
+                // Step 4: Find nearest hex centroid for each candidate & compute base azimuth
+                setCctvStatus('Step 4/8: Computing base azimuths…', 'fas fa-compass fa-beat-fade');
+                await new Promise(r => setTimeout(r, 80));
+
+                allCandidates.forEach(cand => {
+                    let nearestHex = null, minDist = Infinity;
+                    hexCentroids.forEach(h => {
+                        const d = haversineM(cand.lat, cand.lng, h.lat, h.lng);
+                        if (d < minDist) { minDist = d; nearestHex = h; }
+                    });
+                    if (nearestHex) {
+                        cand.baseAz = (bearing(cand.lat, cand.lng, nearestHex.lat, nearestHex.lng) + 360) % 360;
+                    } else {
+                        cand.baseAz = 0;
+                    }
+                });
+
+                // Step 5: Apply azimuth offsets -> create 3 (or N) camera positions per candidate
+                setCctvStatus('Step 5/8: Applying azimuth offsets…', 'fas fa-sync-alt fa-beat-fade');
+                await new Promise(r => setTimeout(r, 80));
+
+                const cameraPositions = [];
+                allCandidates.forEach(cand => {
+                    offsets.forEach(offset => {
+                        cameraPositions.push({
+                            lat: cand.lat, lng: cand.lng,
+                            azimuth: (cand.baseAz + offset) % 360,
+                            type: cand.type, source: cand.source,
+                            camera: camSpec.type, hfov: camSpec.hfov, range: camSpec.range, price: camSpec.price
+                        });
+                    });
+                });
+
+                // Step 6: Generate wedge buffers (FOV polygons)
+                setCctvStatus('Step 6/8: Generating FOV wedges…', 'fas fa-eye fa-beat-fade');
+                await new Promise(r => setTimeout(r, 80));
+
+                cameraPositions.forEach(cam => {
+                    cam.wedge = generateWedge(cam.lat, cam.lng, cam.azimuth, cam.hfov, cam.range);
+                });
+
+                // Step 7: Draw everything on the map
+                setCctvStatus('Step 7/8: Rendering results…', 'fas fa-paint-brush fa-beat-fade');
+                await new Promise(r => setTimeout(r, 80));
+
+                // Draw candidate markers
+                const drawnBuildings = new Set();
+                const drawnPoles = new Set();
+                cameraPositions.forEach(cam => {
+                    const key = cam.lat + ',' + cam.lng;
+                    // Only draw one marker per location
+                    if (cam.type === 'building' && !drawnBuildings.has(key)) {
+                        drawnBuildings.add(key);
+                        const icon = L.divIcon({ className: '', html: '<div style="background:#ef4444; width:9px; height:9px; border:1.5px solid white; box-shadow:0 1px 4px rgba(0,0,0,0.3);"></div>', iconSize: [9, 9] });
+                        L.marker([cam.lat, cam.lng], { icon }).bindPopup('<b>Building Candidate</b><br>Base Az: ' + cam.azimuth.toFixed(1) + '°').addTo(cctvResultLayers);
+                    } else if (cam.type === 'pole' && !drawnPoles.has(key)) {
+                        drawnPoles.add(key);
+                        const icon = L.divIcon({ className: '', html: '<div style="background:#f59e0b; width:9px; height:9px; border-radius:2px; border:1.5px solid white; box-shadow:0 1px 4px rgba(0,0,0,0.3);"></div>', iconSize: [9, 9] });
+                        L.marker([cam.lat, cam.lng], { icon }).bindPopup('<b>Pole Candidate</b><br>Site: ' + cam.source + '<br>Base Az: ' + cam.azimuth.toFixed(1) + '°').addTo(cctvResultLayers);
+                    }
+
+                    // Draw wedge
+                    if (cam.wedge) {
+                        L.polygon(cam.wedge, { color: '#3b82f6', weight: 1, fillColor: '#3b82f6', fillOpacity: 0.15 })
+                            .bindPopup('<b>Camera FOV</b><br>Type: ' + cam.camera + '<br>Az: ' + cam.azimuth.toFixed(1) + '°<br>HFOV: ' + cam.hfov + '°<br>Range: ' + cam.range + 'm<br>Price: RM ' + cam.price.toLocaleString())
+                            .addTo(cctvResultLayers);
+                    }
+                });
+
+                // Step 8: Compute cost summary
+                setCctvStatus('Step 8/8: Computing cost summary…', 'fas fa-calculator fa-beat-fade');
+                const totalCameras = cameraPositions.length;
+                const totalCost = totalCameras * camSpec.price;
+                const buildingCount = drawnBuildings.size;
+                const poleCount = drawnPoles.size;
+
+                document.getElementById('cctvResultsPanel').style.display = 'block';
+                document.getElementById('cctvResultsContent').innerHTML =
+                    '<div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">' +
+                    '<div><span style="font-weight:800; color:#1e293b; font-size:1rem;">' + totalCameras + '</span><br><span style="font-size:0.65rem;">Total Cameras</span></div>' +
+                    '<div><span style="font-weight:800; color:#dc2626; font-size:1rem;">RM ' + totalCost.toLocaleString() + '</span><br><span style="font-size:0.65rem;">Total Cost</span></div>' +
+                    '<div><span style="font-weight:800; color:#ef4444;">' + buildingCount + '</span><br><span style="font-size:0.65rem;">Building Candidates</span></div>' +
+                    '<div><span style="font-weight:800; color:#f59e0b;">' + poleCount + '</span><br><span style="font-size:0.65rem;">Pole Candidates</span></div>' +
+                    '<div><span style="font-weight:800; color:#7c3aed;">' + hexCentroids.length + '</span><br><span style="font-size:0.65rem;">Hex Grid Cells</span></div>' +
+                    '<div><span style="font-weight:800; color:#2563eb;">' + offsets.length + '</span><br><span style="font-size:0.65rem;">Offsets per Candidate</span></div>' +
+                    '</div>' +
+                    '<div style="margin-top:8px; font-size:0.7rem; color:#92400e; background:#fef3c7; padding:6px 8px; border-radius:4px;"><i class="fas fa-info-circle mr-1"></i> Camera: ' + camSpec.type + ' — ' + camSpec.hfov + '° FOV, ' + camSpec.range + 'm range, RM ' + camSpec.price.toLocaleString() + '/unit</div>';
+
+                cctvMap.fitBounds(aoiBufferPoly.getBounds(), { padding: [60, 60] });
+                setCctvStatus('Pipeline complete — ' + totalCameras + ' cameras placed', 'fas fa-check-circle', 5000);
+
+            } catch (err) {
+                console.error('CCTV pipeline error:', err);
+                setCctvStatus('Pipeline error: ' + err.message, 'fas fa-times-circle');
+            } finally {
+                runBtn.disabled = false;
+                runBtn.innerHTML = '<i class="fas fa-play mr-1"></i> Run CCTV Pipeline';
+            }
+        }
+
+        function cctvClearResults() {
+            cctvResultLayers.clearLayers();
+            document.getElementById('cctvResultsPanel').style.display = 'none';
+            setCctvStatus('Results cleared', 'fas fa-check-circle', 2000);
+        }
+
+        // ── Geometry Helpers ──
+        function haversineM(lat1, lng1, lat2, lng2) {
+            const R = 6378137, dLat = (lat2-lat1)*Math.PI/180, dLng = (lng2-lng1)*Math.PI/180;
+            const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        }
+
+        function bearing(lat1, lng1, lat2, lng2) {
+            const dLng = (lng2-lng1)*Math.PI/180;
+            const y = Math.sin(dLng)*Math.cos(lat2*Math.PI/180);
+            const x = Math.cos(lat1*Math.PI/180)*Math.sin(lat2*Math.PI/180) - Math.sin(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.cos(dLng);
+            return (Math.atan2(y,x)*180/Math.PI + 360) % 360;
+        }
+
+        function bufferPolygon(latlngs, distM) {
+            // Simple outward offset (approximate for small distances)
+            const center = latlngs.reduce((acc, p) => ({ lat: acc.lat + p.lat/latlngs.length, lng: acc.lng + p.lng/latlngs.length }), { lat:0, lng:0 });
+            const degOffset = distM / 111320;
+            return latlngs.map(p => {
+                const dx = p.lng - center.lng, dy = p.lat - center.lat;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                if (dist === 0) return [p.lat, p.lng];
+                const scale = (dist + degOffset) / dist;
+                return [center.lat + dy*scale, center.lng + dx*scale];
+            });
+        }
+
+        function isPointInPolygon(point, polygon) {
+            let inside = false;
+            const x = point[0], y = point[1];
+            for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+                const xi = polygon[i][0]||polygon[i].lat, yi = polygon[i][1]||polygon[i].lng;
+                const xj = polygon[j][0]||polygon[j].lat, yj = polygon[j][1]||polygon[j].lng;
+                if ((yi > y) !== (yj > y) && x < (xj-xi)*(y-yi)/(yj-yi)+xi) inside = !inside;
+            }
+            return inside;
+        }
+
+        function generateHexGrid(bounds, spacingM, clipPoly) {
+            const centroids = [];
+            const dLat = spacingM / 111320;
+            const dLng = spacingM / (111320 * Math.cos(bounds.getCenter().lat * Math.PI / 180));
+            const rowH = dLat * Math.sqrt(3);
+            let row = 0;
+            for (let lat = bounds.getSouth(); lat <= bounds.getNorth(); lat += rowH) {
+                const offset = (row % 2 === 1) ? dLng / 2 : 0;
+                for (let lng = bounds.getWest() + offset; lng <= bounds.getEast(); lng += dLng) {
+                    if (isPointInPolygon([lat, lng], clipPoly)) {
+                        centroids.push({ lat, lng });
+                    }
+                }
+                row++;
+            }
+            return centroids;
+        }
+
+        function createHexagon(lat, lng, radiusM) {
+            const pts = [];
+            for (let i = 0; i < 6; i++) {
+                const angle = (60 * i - 30) * Math.PI / 180;
+                const dLat = (radiusM / 111320) * Math.sin(angle);
+                const dLng = (radiusM / (111320 * Math.cos(lat * Math.PI / 180))) * Math.cos(angle);
+                pts.push([lat + dLat, lng + dLng]);
+            }
+            return pts;
+        }
+
+        function generateWedge(lat, lng, azimuth, hfov, rangeM) {
+            const pts = [[lat, lng]];
+            const halfFov = hfov / 2;
+            const steps = 16;
+            for (let i = 0; i <= steps; i++) {
+                const angle = (azimuth - halfFov + (hfov * i / steps)) * Math.PI / 180;
+                const dLat = (rangeM / 6378137) * Math.cos(angle);
+                const dLng = (rangeM / 6378137) * Math.sin(angle) / Math.cos(lat * Math.PI / 180);
+                pts.push([lat + dLat * 180 / Math.PI, lng + dLng * 180 / Math.PI]);
+            }
+            pts.push([lat, lng]);
+            return pts;
+        }
+
+        // ── CCTV Search ──
+        let cctvSearchTimeout = null;
+        function onCctvSearch(query) {
+            clearTimeout(cctvSearchTimeout);
+            const resultsDiv = document.getElementById('cctvSearchResults');
+            if (!query || query.length < 2) { resultsDiv.style.display = 'none'; return; }
+            cctvSearchTimeout = setTimeout(() => {
+                const q = query.toUpperCase();
+                const matches = cctvSiteDataCache.filter(s => (s.site_id||'').toUpperCase().includes(q) || (s.site_name||'').toUpperCase().includes(q)).slice(0, 15);
+                if (!matches.length) { resultsDiv.innerHTML = '<div style="padding:12px 16px; color:#94a3b8; font-size:0.82rem;">No sites found</div>'; resultsDiv.style.display = 'block'; return; }
+                resultsDiv.innerHTML = matches.map(s =>
+                    `<div onclick="flyToCctvSite('${s.site_id}')" style="padding:8px 12px; cursor:pointer; display:flex; align-items:center; gap:8px; border-bottom:1px solid #f1f5f9;" onmouseover="this.style.background='#f0f9ff'" onmouseout="this.style.background='white'">
+                        <i class="fas fa-broadcast-tower" style="color:#2563eb; font-size:0.8rem;"></i>
+                        <div style="flex:1;"><div style="font-weight:700; font-size:0.8rem; color:#1e293b;">${s.site_id}</div><div style="font-size:0.7rem; color:#64748b;">${s.site_name||''}</div></div>
+                    </div>`).join('');
+                resultsDiv.style.display = 'block';
+            }, 150);
+        }
+        function flyToCctvSite(siteId) {
+            document.getElementById('cctvSearchResults').style.display = 'none';
+            const site = cctvSiteDataCache.find(s => s.site_id === siteId);
+            if (!site || !cctvMap) return;
+            document.getElementById('cctvSearchInput').value = site.site_id + ' — ' + (site.site_name || '');
+            cctvMap.flyTo([site.lat, site.lng], 16, { duration: 1 });
+        }
+        document.addEventListener('click', function(e) {
+            const sb = document.getElementById('cctvSearchInput');
+            const rd = document.getElementById('cctvSearchResults');
+            if (sb && rd && !sb.contains(e.target) && !rd.contains(e.target)) rd.style.display = 'none';
+        });
+
+        // ==========================================
         // METABASE DASHBOARD EMBEDDING
         // ==========================================
 
@@ -3959,6 +4603,450 @@
         function closeMetabaseDashboard() {
             document.getElementById('metabaseModal').classList.add('hidden');
             document.getElementById('metabaseEmbedContainer').innerHTML = '';
+        }
+
+        // ==========================================
+        // CESIUM 3D MAP INITIALIZATION
+        // ==========================================
+        let cesiumViewer = null;
+        let cesiumInitialized = false;
+
+        function setCesiumStatus(msg, icon, autohide) {
+            const el = document.getElementById('cesium3dStatus');
+            const txt = document.getElementById('cesiumStatusText');
+            const spin = document.getElementById('cesiumStatusSpinner');
+            if (!el) return;
+            txt.textContent = msg;
+            spin.className = icon || 'fas fa-circle-notch fa-spin';
+            el.style.opacity = '1';
+            el.style.pointerEvents = 'none';
+            if (autohide) {
+                setTimeout(() => { el.style.opacity = '0'; }, autohide);
+            }
+        }
+
+        async function initCesiumIfNeeded() {
+            if (cesiumInitialized) {
+                if (cesiumViewer) cesiumViewer.resize();
+                return;
+            }
+            cesiumInitialized = true;
+
+            setCesiumStatus('Initializing 3D viewer…', 'fas fa-circle-notch fa-spin');
+
+            Cesium.Ion.defaultAccessToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJjMjg4MzRjNi01ZTRlLTQ4NzgtOGVlNi0yMjFhMjMyODQ2NjAiLCJpZCI6NDAzNTkyLCJpYXQiOjE3NzQ3NjQwNTN9.Yw-hl_nLMDwpYDeB_-w1xT6bj1vBpbCEIKCePeo6ehU";
+
+            try {
+                setCesiumStatus('Loading terrain data…', 'fas fa-mountain fa-beat-fade');
+                cesiumViewer = new Cesium.Viewer('cesiumContainer', {
+                    terrainProvider: await Cesium.createWorldTerrainAsync(),
+                    timeline: false,
+                    animation: false
+                });
+
+                cesiumViewer.scene.globe.enableLighting = true;
+
+                setCesiumStatus('Loading 3D buildings…', 'fas fa-building fa-beat-fade');
+                const buildings = await Cesium.createOsmBuildingsAsync();
+                cesiumViewer.scene.primitives.add(buildings);
+
+                cesiumViewer.camera.flyTo({
+                    destination: Cesium.Cartesian3.fromDegrees(101.6869, 3.1390, 1500)
+                });
+
+                setCesiumStatus('3D viewer ready', 'fas fa-check-circle', 3000);
+                // Show the "Load Cell Sites" button
+                document.getElementById('cesiumLoadSitesBtn').style.display = 'flex';
+
+            } catch (e) {
+                console.error('Cesium init error:', e);
+                setCesiumStatus('Failed to load 3D Map: ' + e.message, 'fas fa-times-circle');
+                document.getElementById('cesiumContainer').innerHTML =
+                    '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#dc2626;font-weight:bold;font-size:1.1rem;"><i class="fas fa-exclamation-triangle" style="margin-right:8px;"></i> Failed to load 3D Map: ' + e.message + '</div>';
+            }
+        }
+
+        // ==========================================
+        // LOAD / UNLOAD 3D CELL SITES (USER-TRIGGERED)
+        // ==========================================
+        let cesiumSitesLoaded = false;
+
+        async function toggleCesiumSites() {
+            const btn = document.getElementById('cesiumLoadSitesBtn');
+            const searchBar = document.getElementById('cesiumSearchBar');
+
+            if (cesiumSitesLoaded) {
+                // Unload sites
+                cesiumViewer.entities.removeAll();
+                cesiumSitesLoaded = false;
+                btn.innerHTML = '<i class="fas fa-broadcast-tower"></i> Load Cell Sites';
+                btn.style.background = '#1d4ed8';
+                searchBar.style.display = 'none';
+                setCesiumStatus('Cell sites removed', 'fas fa-check-circle', 2500);
+                return;
+            }
+
+            // Load sites
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Loading…';
+            btn.style.opacity = '0.7';
+
+            // Fetch data if needed
+            if (!siteDataCache || siteDataCache.length === 0) {
+                setCesiumStatus('Fetching site data from server…', 'fas fa-database fa-beat-fade');
+                try {
+                    const params = new URLSearchParams();
+                    const weekSel = document.getElementById('weekSelect');
+                    const regionSel = document.getElementById('regionSelect');
+                    if (weekSel && weekSel.value && weekSel.value !== 'All') params.set('week', weekSel.value);
+                    if (regionSel && regionSel.value && regionSel.value !== 'All') params.set('region', regionSel.value);
+                    const resp = await fetch('/api/sites?' + params.toString());
+                    const data = await resp.json();
+                    if (Array.isArray(data)) {
+                        siteDataCache = data.filter(s => {
+                            if (!s || !s.site_id) return false;
+                            const lat = parseFloat(s.lat); const lng = parseFloat(s.lng);
+                            return !isNaN(lat) && !isNaN(lng) && (lat !== 0 || lng !== 0);
+                        });
+                    }
+                } catch (fetchErr) {
+                    console.warn('3D map: could not fetch site data:', fetchErr);
+                    setCesiumStatus('Failed to fetch site data: ' + fetchErr.message, 'fas fa-times-circle', 5000);
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-broadcast-tower"></i> Load Cell Sites';
+                    btn.style.opacity = '1';
+                    return;
+                }
+            }
+
+            if (!siteDataCache || siteDataCache.length === 0) {
+                setCesiumStatus('No site data available — try loading data from the Coverage Map tab first', 'fas fa-exclamation-triangle', 6000);
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-broadcast-tower"></i> Load Cell Sites';
+                btn.style.opacity = '1';
+                return;
+            }
+
+            setCesiumStatus('Building ' + siteDataCache.length + ' cell towers…', 'fas fa-broadcast-tower fa-beat-fade');
+            await new Promise(r => setTimeout(r, 100));
+
+            add3dSiteMarkers();
+            cesiumSitesLoaded = true;
+
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-eye-slash"></i> Unload Cell Sites';
+            btn.style.background = '#dc2626';
+            btn.style.opacity = '1';
+            searchBar.style.display = '';
+            setCesiumStatus(siteDataCache.length + ' sites loaded successfully', 'fas fa-check-circle', 4000);
+        }
+
+        // ==========================================
+        // 3D MAP SEARCH
+        // ==========================================
+        let cesiumSearchTimeout = null;
+
+        function onCesiumSearch(query) {
+            clearTimeout(cesiumSearchTimeout);
+            const resultsDiv = document.getElementById('cesiumSearchResults');
+            if (!query || query.length < 2) {
+                resultsDiv.style.display = 'none';
+                return;
+            }
+            cesiumSearchTimeout = setTimeout(() => {
+                const q = query.toUpperCase();
+                const matches = (siteDataCache || []).filter(s => {
+                    const id = (s.site_id || '').toUpperCase();
+                    const name = (s.site_name || '').toUpperCase();
+                    return id.includes(q) || name.includes(q);
+                }).slice(0, 15);
+
+                if (matches.length === 0) {
+                    resultsDiv.innerHTML = '<div style="padding:12px 16px; color:#94a3b8; font-size:0.82rem;">No sites found</div>';
+                    resultsDiv.style.display = 'block';
+                    return;
+                }
+
+                resultsDiv.innerHTML = matches.map(s => {
+                    const isCong = isSiteCongested(s);
+                    return `<div onclick="flyToSite3d('${s.site_id}')" style="padding:10px 16px; cursor:pointer; display:flex; align-items:center; gap:10px; border-bottom:1px solid #f1f5f9; transition:background 0.15s;"
+                        onmouseover="this.style.background='#f0f9ff'" onmouseout="this.style.background='white'">
+                        <i class="fas fa-broadcast-tower" style="color:${isCong ? '#dc2626' : '#2563eb'}; font-size:0.9rem; width:18px; text-align:center;"></i>
+                        <div style="flex:1; min-width:0;">
+                            <div style="font-weight:700; font-size:0.82rem; color:#1e293b;">${s.site_id}</div>
+                            <div style="font-size:0.72rem; color:#64748b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${s.site_name || 'Unnamed'}</div>
+                        </div>
+                        ${isCong ? '<span style="background:#fee2e2; color:#dc2626; font-size:0.6rem; font-weight:800; padding:2px 6px; border-radius:4px;">CONGESTED</span>' : ''}
+                    </div>`;
+                }).join('');
+                resultsDiv.style.display = 'block';
+            }, 150);
+        }
+
+        function isSiteCongested(site) {
+            if (!site.sectors) return false;
+            const areaStr = String(site.area_target || '').toLowerCase();
+            const isUrban = areaStr.includes('urban') || areaStr.includes('kmc');
+            const prbThreshold = isUrban ? 80.0 : 92.0;
+            for (let sec of site.sectors) {
+                if (parseFloat(sec.prb ?? 0) >= prbThreshold) return true;
+            }
+            return false;
+        }
+
+        function flyToSite3d(siteId) {
+            const resultsDiv = document.getElementById('cesiumSearchResults');
+            const input = document.getElementById('cesiumSearchInput');
+            resultsDiv.style.display = 'none';
+
+            const site = (siteDataCache || []).find(s => s.site_id === siteId);
+            if (!site || !cesiumViewer) return;
+
+            input.value = site.site_id + ' — ' + (site.site_name || '');
+
+            cesiumViewer.camera.flyTo({
+                destination: Cesium.Cartesian3.fromDegrees(
+                    parseFloat(site.lng),
+                    parseFloat(site.lat),
+                    400
+                ),
+                orientation: {
+                    heading: Cesium.Math.toRadians(0),
+                    pitch: Cesium.Math.toRadians(-45),
+                    roll: 0
+                },
+                duration: 1.5
+            });
+        }
+
+        // Close search dropdown when clicking elsewhere
+        document.addEventListener('click', function(e) {
+            const searchBox = document.getElementById('cesiumSearchInput');
+            const resultsDiv = document.getElementById('cesiumSearchResults');
+            if (searchBox && resultsDiv && !searchBox.contains(e.target) && !resultsDiv.contains(e.target)) {
+                resultsDiv.style.display = 'none';
+            }
+        });
+
+        function add3dSiteMarkers() {
+            if (!cesiumViewer || !siteDataCache) return;
+
+            const TOWER_HEIGHT = 40;       // meters
+            const POLE_RADIUS  = 0.4;      // meters
+            const PANEL_WIDTH  = 0.6;      // meters
+            const PANEL_HEIGHT = 1.8;      // meters
+            const PANEL_DEPTH  = 0.25;     // meters
+            const PANEL_OFFSET = 1.2;      // meters from center
+            const BEAM_LENGTH  = 300;      // meters (visual beam length)
+            const BEAM_WIDTH_DEG = 30;     // degrees (visual beam half-angle)
+
+            // Tech colors for sector beams
+            const TECH_COLORS = {
+                '5G': Cesium.Color.YELLOW.withAlpha(0.25),
+                '4G': Cesium.Color.CORNFLOWERBLUE.withAlpha(0.20),
+                '3G': Cesium.Color.ORANGE.withAlpha(0.18),
+                '2G': Cesium.Color.GRAY.withAlpha(0.15)
+            };
+
+            const TECH_BEAM_HEIGHTS = {
+                '5G': { bottom: TOWER_HEIGHT - 2, top: TOWER_HEIGHT + 8 },
+                '4G': { bottom: TOWER_HEIGHT - 4, top: TOWER_HEIGHT + 6 },
+                '3G': { bottom: TOWER_HEIGHT - 5, top: TOWER_HEIGHT + 4 },
+                '2G': { bottom: TOWER_HEIGHT - 6, top: TOWER_HEIGHT + 3 }
+            };
+
+            siteDataCache.forEach(site => {
+                if (!site.lat || !site.lng) return;
+                const lng = parseFloat(site.lng);
+                const lat = parseFloat(site.lat);
+
+                // --- Congestion check ---
+                let isCongested = false;
+                if (site.sectors) {
+                    const areaStr = String(site.area_target || '').toLowerCase();
+                    const isUrban = areaStr.includes('urban') || areaStr.includes('kmc');
+                    const prbThreshold = isUrban ? 80.0 : 92.0;
+                    for (let sec of site.sectors) {
+                        const p = parseFloat(sec.prb ?? 0);
+                        if (p >= prbThreshold) { isCongested = true; break; }
+                    }
+                }
+
+                const towerColor = isCongested
+                    ? Cesium.Color.fromCssColorString('#dc2626')
+                    : Cesium.Color.fromCssColorString('#6b7280');
+                const panelColor = isCongested
+                    ? Cesium.Color.fromCssColorString('#fca5a5')
+                    : Cesium.Color.fromCssColorString('#e5e7eb');
+
+                // ====== TOWER POLE (cylinder) ======
+                cesiumViewer.entities.add({
+                    position: Cesium.Cartesian3.fromDegrees(lng, lat, TOWER_HEIGHT / 2),
+                    cylinder: {
+                        length: TOWER_HEIGHT,
+                        topRadius: POLE_RADIUS * 0.6,
+                        bottomRadius: POLE_RADIUS,
+                        material: towerColor,
+                        heightReference: Cesium.HeightReference.RELATIVE_TO_GROUND
+                    }
+                });
+
+                // ====== LATTICE CROSS-BRACES (visual detail) ======
+                for (let h = 5; h < TOWER_HEIGHT; h += 8) {
+                    cesiumViewer.entities.add({
+                        position: Cesium.Cartesian3.fromDegrees(lng, lat, h),
+                        cylinder: {
+                            length: 0.3,
+                            topRadius: POLE_RADIUS * 1.8,
+                            bottomRadius: POLE_RADIUS * 1.8,
+                            material: towerColor.withAlpha(0.6),
+                            heightReference: Cesium.HeightReference.RELATIVE_TO_GROUND
+                        }
+                    });
+                }
+
+                // ====== PLATFORM AT TOP ======
+                cesiumViewer.entities.add({
+                    position: Cesium.Cartesian3.fromDegrees(lng, lat, TOWER_HEIGHT),
+                    cylinder: {
+                        length: 0.4,
+                        topRadius: 2.0,
+                        bottomRadius: 2.0,
+                        material: towerColor.withAlpha(0.8),
+                        heightReference: Cesium.HeightReference.RELATIVE_TO_GROUND
+                    }
+                });
+
+                // ====== ANTENNA PANELS & SECTOR BEAMS ======
+                // Collect unique azimuths from coverage data
+                const azimuths = new Set();
+                if (site.coverage && site.coverage.length > 0) {
+                    site.coverage.forEach(sec => azimuths.add(parseFloat(sec.az)));
+                } else if (site.sectors && site.sectors.length > 0) {
+                    // Fallback: distribute evenly if no coverage data
+                    const count = Math.min(site.sectors.length, 3);
+                    for (let i = 0; i < count; i++) azimuths.add(i * (360 / count));
+                } else {
+                    // Default 3-sector
+                    [0, 120, 240].forEach(a => azimuths.add(a));
+                }
+
+                azimuths.forEach(az => {
+                    const azRad = Cesium.Math.toRadians(az);
+
+                    // Offset the panel from tower center
+                    const panelLng = lng + (PANEL_OFFSET / 111320) * Math.sin(azRad) / Math.cos(Cesium.Math.toRadians(lat));
+                    const panelLat = lat + (PANEL_OFFSET / 111320) * Math.cos(azRad);
+
+                    // Antenna panel box
+                    cesiumViewer.entities.add({
+                        position: Cesium.Cartesian3.fromDegrees(panelLng, panelLat, TOWER_HEIGHT + 0.5),
+                        box: {
+                            dimensions: new Cesium.Cartesian3(PANEL_WIDTH, PANEL_DEPTH, PANEL_HEIGHT),
+                            material: panelColor,
+                            heightReference: Cesium.HeightReference.RELATIVE_TO_GROUND
+                        },
+                        orientation: Cesium.Transforms.headingPitchRollQuaternion(
+                            Cesium.Cartesian3.fromDegrees(panelLng, panelLat, TOWER_HEIGHT + 0.5),
+                            new Cesium.HeadingPitchRoll(Cesium.Math.toRadians(az), 0, 0)
+                        )
+                    });
+                });
+
+                // ====== SECTOR BEAMS FROM COVERAGE DATA ======
+                if (site.coverage && site.coverage.length > 0) {
+                    const azGroups = {};
+                    site.coverage.forEach(sec => {
+                        const a = parseFloat(sec.az);
+                        if (!azGroups[a]) azGroups[a] = [];
+                        azGroups[a].push(sec);
+                    });
+
+                    Object.entries(azGroups).forEach(([azStr, sectors]) => {
+                        const az = parseFloat(azStr);
+                        sectors.forEach(sec => {
+                            const tech = sec.tech || '4G';
+                            const beamColor = TECH_COLORS[tech] || TECH_COLORS['4G'];
+                            const heights = TECH_BEAM_HEIGHTS[tech] || TECH_BEAM_HEIGHTS['4G'];
+                            const bw = (sec.bw || 65) / 2;
+                            const beamLen = Math.min(sec.rad || BEAM_LENGTH, 500);
+
+                            // Create a fan of points for the beam polygon
+                            const beamPoints = [];
+                            // Origin at tower top
+                            beamPoints.push(Cesium.Cartesian3.fromDegrees(lng, lat, heights.top));
+
+                            const steps = 8;
+                            for (let i = 0; i <= steps; i++) {
+                                const angle = az - bw + (2 * bw * i / steps);
+                                const angleRad = Cesium.Math.toRadians(angle);
+                                const endLng = lng + (beamLen / 111320) * Math.sin(angleRad) / Math.cos(Cesium.Math.toRadians(lat));
+                                const endLat = lat + (beamLen / 111320) * Math.cos(angleRad);
+                                beamPoints.push(Cesium.Cartesian3.fromDegrees(endLng, endLat, heights.bottom));
+                            }
+
+                            cesiumViewer.entities.add({
+                                polygon: {
+                                    hierarchy: new Cesium.PolygonHierarchy(beamPoints),
+                                    perPositionHeight: true,
+                                    material: beamColor,
+                                    outline: true,
+                                    outlineColor: beamColor.withAlpha(0.4),
+                                    outlineWidth: 1
+                                }
+                            });
+                        });
+                    });
+                }
+
+                // ====== AVIATION WARNING LIGHT ======
+                cesiumViewer.entities.add({
+                    position: Cesium.Cartesian3.fromDegrees(lng, lat, TOWER_HEIGHT + 2.5),
+                    point: {
+                        pixelSize: isCongested ? 7 : 5,
+                        color: isCongested
+                            ? Cesium.Color.RED
+                            : Cesium.Color.fromCssColorString('#22c55e'),
+                        outlineColor: Cesium.Color.WHITE,
+                        outlineWidth: 1,
+                        heightReference: Cesium.HeightReference.RELATIVE_TO_GROUND,
+                        scaleByDistance: new Cesium.NearFarScalar(100, 1.5, 50000, 0.3)
+                    }
+                });
+
+                // ====== SITE LABEL ======
+                cesiumViewer.entities.add({
+                    position: Cesium.Cartesian3.fromDegrees(lng, lat, TOWER_HEIGHT + 5),
+                    label: {
+                        text: site.site_id || '',
+                        font: 'bold 12px sans-serif',
+                        fillColor: Cesium.Color.WHITE,
+                        outlineColor: isCongested
+                            ? Cesium.Color.fromCssColorString('#991b1b')
+                            : Cesium.Color.fromCssColorString('#1e3a8a'),
+                        outlineWidth: 3,
+                        style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+                        verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+                        pixelOffset: new Cesium.Cartesian2(0, -8),
+                        distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 20000),
+                        heightReference: Cesium.HeightReference.RELATIVE_TO_GROUND,
+                        scaleByDistance: new Cesium.NearFarScalar(200, 1.0, 30000, 0.3),
+                        showBackground: true,
+                        backgroundColor: isCongested
+                            ? Cesium.Color.fromCssColorString('#dc2626').withAlpha(0.8)
+                            : Cesium.Color.fromCssColorString('#1d4ed8').withAlpha(0.8),
+                        backgroundPadding: new Cesium.Cartesian2(6, 4)
+                    },
+                    description:
+                        '<table style="width:100%;border-collapse:collapse;font-family:sans-serif;">' +
+                        '<tr><td style="padding:6px;font-weight:bold;color:#1d4ed8;">Site ID</td><td style="padding:6px;">' + (site.site_id || '-') + '</td></tr>' +
+                        '<tr><td style="padding:6px;font-weight:bold;color:#1d4ed8;">Name</td><td style="padding:6px;">' + (site.site_name || '-') + '</td></tr>' +
+                        '<tr><td style="padding:6px;font-weight:bold;color:#1d4ed8;">Region</td><td style="padding:6px;">' + (site.region || '-') + '</td></tr>' +
+                        '<tr><td style="padding:6px;font-weight:bold;color:#1d4ed8;">Status</td><td style="padding:6px;color:' + (isCongested ? '#dc2626;font-weight:bold' : '#059669') + ';">' + (isCongested ? 'CONGESTED' : 'Normal') + '</td></tr>' +
+                        (site.sectors ? '<tr><td style="padding:6px;font-weight:bold;color:#1d4ed8;">Sectors</td><td style="padding:6px;">' + site.sectors.length + '</td></tr>' : '') +
+                        '</table>'
+                });
+            });
         }
 
 
